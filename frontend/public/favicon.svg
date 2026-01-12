@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" width="32" height="32"><svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" width="32" height="32"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" fill="none">
+  <rect width="32" height="32" rx="6" fill="#8b5cf6"></rect>
+  <path d="M16 9.5v13M21.5 16h2.5M21.5 12h2.5M6 24a1.5 1.5 0 0 1-1.5-1.5V9.5A1.5 1.5 0 0 1 6 8h6.5a4 4 0 0 1 4 4 4 4 0 0 1 4-4H27a1.5 1.5 0 0 1 1.5 1.5v13A1.5 1.5 0 0 1 27 24h-7.5a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+  <path d="M10 16h2.5M10 12h2.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg></svg><style>@media (prefers-color-scheme: light) { :root { filter: none; } }
+@media (prefers-color-scheme: dark) { :root { filter: none; } }
+</style></svg>

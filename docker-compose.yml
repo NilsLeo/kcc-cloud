@@ -1,0 +1,311 @@
+services:
+
+
+
+  backend:
+    build:
+      context: ./backend
+      args:
+        USER_ID: ${PUID}
+        GROUP_ID: ${PGID}
+        MINIO_URL: ${MINIO_URL}
+    stdin_open: true
+    container_name: mangaconverter-foss-backend
+    tty: true
+    ports:
+      - "8060:8060"
+    volumes:
+      - ./backend/app:/app
+    user: "${PUID}:${PGID}"
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+      - DATABASE_PUBLIC_URL=${DATABASE_PUBLIC_URL:-postgresql://postgres:localdev123@postgres:5432/mangaconverter}
+      - PGHOST=${PGHOST:-postgres}
+      - PGPORT=${PGPORT:-5432}
+      - PGDATABASE=${PGDATABASE:-mangaconverter}
+      - PGUSER=${PGUSER:-postgres}
+      - PGPASSWORD=${PGPASSWORD:-localdev123}
+      - ALLOWED_ORIGINS=https://www.mangaconverter.com, https://mangaconverter.com, http://localhost:3000, http://localhost
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+      # Hetzner Object Storage credentials
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - S3_BUCKET=${S3_BUCKET:-mangaconverter}
+      - S3_ERROR_BUCKET=${S3_ERROR_BUCKET:-mangaconverter-errors}
+      # Hetzner endpoint URL
+      - MINIO_URL=${MINIO_URL:-https://hel1.your-objectstorage.com}
+      - MINIO_EXTERNAL_URL=${MINIO_EXTERNAL_URL:-https://hel1.your-objectstorage.com}
+      - POLLING_SECS=${POLLING_SECS:-1}
+      - GUNICORN_WORKERS=${GUNICORN_WORKERS:-4}
+      - GUNICORN_TIMEOUT=${GUNICORN_TIMEOUT:-600}
+      - GUNICORN_GRACEFUL_TIMEOUT=${GUNICORN_GRACEFUL_TIMEOUT:-600}
+      - NEXT_PUBLIC_TTL=${NEXT_PUBLIC_TTL:-1}
+      - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
+      - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+      # Celery configuration (Phase 3 - enabled by default, threading removed)
+      - CELERY_BROKER_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+
+
+
+
+
+
+  redis:
+    image: redis:7-alpine
+    container_name: mangaconverter-foss-redis
+    restart: no
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./volumes/redis/data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Merged celery worker handles both conversion and S3 tasks
+  #
+  celery-worker:
+    build:
+      context: ./backend
+      args:
+        USER_ID: ${PUID}
+        GROUP_ID: ${PGID}
+        MINIO_URL: ${MINIO_URL}
+    # Handle both conversion and s3_tasks queues with prefork pool
+    # -c 1: 1 worker process (sequential processing for testing)
+    # -E: Enable task-sent events for real-time status monitoring
+    command: celery -A celery_config.celery_app worker --loglevel=info -P prefork -c 1 -Q conversion,s3_tasks -E
+    volumes:
+      - ./backend/app:/app
+    environment:
+      - TZ=${TZ}
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - DATABASE_PUBLIC_URL=${DATABASE_PUBLIC_URL:-postgresql://postgres:localdev123@postgres:5432/mangaconverter}
+      - PGHOST=${PGHOST:-postgres}
+      - PGPORT=${PGPORT:-5432}
+      - PGDATABASE=${PGDATABASE:-mangaconverter}
+      - PGUSER=${PGUSER:-postgres}
+      - PGPASSWORD=${PGPASSWORD:-localdev123}
+      # Hetzner Object Storage credentials
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - S3_BUCKET=${S3_BUCKET:-mangaconverter}
+      - S3_ERROR_BUCKET=${S3_ERROR_BUCKET}
+      - MINIO_URL=${MINIO_URL}
+      - MINIO_EXTERNAL_URL=${MINIO_EXTERNAL_URL}
+    depends_on:
+      - redis
+    deploy:
+      resources:
+        limits:
+          cpus: '1.9'
+          memory: 3G
+        reservations:
+          cpus: '1.5'
+          memory: 2500M
+
+
+
+
+
+  frontend-dev:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+    container_name: mangaconverter-frontend-dev
+    restart: no
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - TZ=${TZ}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8060}
+      - API_BASE_URL=http://backend:8060
+      - NEXT_PUBLIC_TTL=${NEXT_PUBLIC_TTL:-1}
+      - NEXT_PUBLIC_POLL_INTERVAL=${NEXT_PUBLIC_POLL_INTERVAL:-1500}
+      - NEXT_PUBLIC_MAX_CONCURRENT_PARTS=${NEXT_PUBLIC_MAX_CONCURRENT_PARTS:-6}
+      - NEXT_PUBLIC_QUEUED_SECONDS=${NEXT_PUBLIC_QUEUED_SECONDS:-5}
+      - NEXT_PUBLIC_MAX_FILES=${NEXT_PUBLIC_MAX_FILES:-10}
+      - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+      - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
+
+
+
+
+  # dashboard:
+  #   build:
+  #     context: ./dashboard
+  #   container_name: mangaconverter-dashboard
+  #   restart: no
+  #   ports:
+  #     - "8501:8501"
+  #   volumes:
+  #     - ./dashboard:/app
+  #   environment:
+  #     - TZ=${TZ:-Europe/Berlin}
+  #     - DATABASE_PUBLIC_URL=${DATABASE_PUBLIC_URL}
+  #     - PGHOST=${PGHOST}
+  #     - PGPORT=${PGPORT}
+  #     - PGDATABASE=${PGDATABASE}
+  #     - PGUSER=${PGUSER}
+  #     - PGPASSWORD=${PGPASSWORD}
+    # depends_on:
+      # - backend
+
+
+  # flower:
+  #   build:
+  #     context: ./mangaconverter/backend
+  #     args:
+  #       USER_ID: ${PUID}
+  #       GROUP_ID: ${PGID}
+  #   container_name: mangaconverter-flower
+  #   command: celery -A celery_config.celery_app flower --port=5555 --basic_auth=${FLOWER_USER:-admin}:${FLOWER_PASSWORD:-admin123}
+  #   ports:
+  #     - "5555:5555"
+  #   volumes:
+  #     - ./mangaconverter/backend/app:/app
+  #   environment:
+  #     - TZ=${TZ}
+  #     - CELERY_BROKER_URL=redis://redis:6379/0
+  #     - DATABASE_PUBLIC_URL=${DATABASE_PUBLIC_URL}
+  #   depends_on:
+  #     - redis
+  #     - celery-worker
+  #   restart: no
+  #   logging:
+  #     driver: "json-file"
+  #     options:
+  #       max-size: "10m"
+  #       max-file: "3"
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         cpus: '0.5'
+  #         memory: 512M
+  #       reservations:
+  #         cpus: '0.25'
+  #         memory: 256M
+  # fider-app:
+  #   restart: no
+  #   image: getfider/fider:stable
+  #   ports:
+  #     - "8081:3000"
+  #   environment:
+  #     BASE_URL: http://localhost:8081
+  #     DATABASE_PUBLIC_URL: ${DATABASE_PUBLIC_URL}
+  #     JWT_SECRET: VERY_STRONG_SECRET_SHOULD_BE_USED_HERE
+  #     EMAIL_NOREPLY: noreply@yourdomain.com
+      # Uncomment and configure one of the following email settings
+      # EMAIL_MAILGUN_API: key-yourkeygoeshere
+      # EMAIL_MAILGUN_DOMAIN: yourdomain.com
+      # EMAIL_MAILGUN_REGION: US
+      # EMAIL_SMTP_HOST: smtp.yourdomain.com
+      # EMAIL_SMTP_PORT: 587
+      # EMAIL_SMTP_USERNAME: user@yourdomain.com
+      # EMAIL_SMTP_PASSWORD: s0m3p4ssw0rd
+      # EMAIL_SMTP_ENABLE_STARTTLS: 'true'
+      # EMAIL_AWSSES_REGION: us-east-1
+      # EMAIL_AWSSES_ACCESS_KEY_ID: youraccesskeygoeshere
+      # EMAIL_AWSSES_SECRET_ACCESS_KEY: yoursecretkeygoeshere
+      # EMAIL_RESEND_API: resend-api-key
+
+  # pgadmin:
+  #   image: dpage/pgadmin4:latest
+  #   container_name: mangaconverter-pgadmin
+  #   restart: no
+  #   ports:
+  #     - "5050:80"
+  #   volumes:
+  #     - ./mangaconverter/volumes/pgadmin:/var/lib/pgadmin
+  #   environment:
+  #     - PGADMIN_DEFAULT_EMAIL=admin@mangaconverter.com
+  #     - PGADMIN_DEFAULT_PASSWORD=admin123
+  #     - PGADMIN_CONFIG_SERVER_MODE=False
+  #     - PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED=False
+  #   logging:
+  #     driver: "json-file"
+  #     options:
+  #       max-size: "10m"
+  #       max-file: "3"
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         cpus: '0.5'
+  #         memory: 512M
+  #       reservations:
+  #         cpus: '0.25'
+  #         memory: 256M
+  # nginx-proxy-manager:
+  #   container_name: nginx-proxy-manager
+  #   image: "jc21/nginx-proxy-manager:latest"
+  #   restart: no
+  #   ports:
+  #     - "80:80"
+  #     - "81:81"
+  #     - "443:443"
+  #   volumes:
+  #     - ./mangaconverter/volumes/nginx-proxy-manager/data:/data
+  #     - ./mangaconverter/volumes/nginx-proxy-manager/letsencrypt:/etc/letsencrypt
+  #   logging:
+  #     driver: "json-file"
+  #     options:
+  #       max-size: "10m"
+  #       max-file: "3"
+  #   environment:
+  #     - PUID=${PUID}
+  #     - PGID=${PGID}
+  #     - TZ=${TZ:-Europe/Berlin}
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         cpus: '0.5'
+  #         memory: 256M
+  #       reservations:
+  #         cpus: '0.25'
+  #         memory: 128M
+
+  # MinIO - Disabled (migrated to Hetzner Object Storage)
+  # Uncomment if you want to use local MinIO instead of Hetzner
+  # minio:
+  #   image: "minio/minio:latest"
+  #   restart: no
+  #   stdin_open: true
+  #   tty: true
+  #   command: server /data --console-address ":9001"
+  #   ports:
+  #     - "9000:9000"
+  #     - "9001:9001"
+  #   volumes:
+  #     - "./minio/data:/data"
+  #   logging:
+  #     driver: "json-file"
+  #     options:
+  #       max-size: "10m"
+  #       max-file: "3"
+  #   environment:
+  #     - TZ=${TZ:-Europe/Berlin}
+  #     - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minio-root-user}
+  #     - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minio-root-password}
+  #     - MINIO_BROWSER_REDIRECT_URL=http://localhost:9001
+  #     - MINIO_SERVER_URL=http://localhost:9000
+  #     - MINIO_API_CORS_ALLOW_ORIGIN=*
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         cpus: '0.5'
+  #         memory: 256M
+  #       reservations:
+  #         cpus: '0.25'
+  #         memory: 128M
