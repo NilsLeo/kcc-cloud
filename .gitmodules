@@ -1,9 +1,3 @@
-[submodule "mangaconverter"]
-	path = mangaconverter
-	url = git@github.com:NilsLeo/mangaconverter.git
-[submodule "mangaconverter-fe"]
-	path = mangaconverter-fe
-	url = git@github.com:NilsLeo/mangaconverter-fe.git
-[submodule "backend/app/kcc"]
-	path = backend/app/kcc
+[submodule "app/backend/app/kcc"]
+	path = app/backend/app/kcc
 	url = https://github.com/ciromattia/kcc.git
