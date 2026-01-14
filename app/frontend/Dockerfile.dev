@@ -1,0 +1,19 @@
+FROM node:20-slim
+
+ENV NEXT_TELEMETRY_DISABLED=1
+
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+
+RUN npm install -g pnpm
+
+WORKDIR /app
+
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --no-frozen-lockfile
+
+# Do NOT copy the entire source code here — it's mounted in docker-compose
+
+EXPOSE 3000
+
+CMD ["pnpm", "dev", "--port", "3000", "--hostname", "0.0.0.0"]

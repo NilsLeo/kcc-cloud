@@ -1,0 +1,97 @@
+services:
+
+
+  frontend-dev:
+    build:
+      context: ./app/frontend
+      dockerfile: Dockerfile.dev
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8060}
+    container_name: mangaconverter-foss-frontend-dev
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./app/frontend:/app
+      - /app/node_modules
+    environment:
+      - TZ=${TZ:-UTC}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8060}
+      - NEXT_PUBLIC_MAX_FILES=${NEXT_PUBLIC_MAX_FILES:-10}
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: ./backend
+      args:
+        USER_ID: ${PUID:-1000}
+        GROUP_ID: ${PGID:-1000}
+    container_name: mangaconverter-foss-backend
+    restart: unless-stopped
+    ports:
+      - "8060:8060"
+    volumes:
+      - ./app/backend/app:/app
+      - conversion-data:/data
+    user: "${PUID:-1000}:${PGID:-1000}"
+    environment:
+      - TZ=${TZ:-UTC}
+      - DATABASE_URL=sqlite:////data/jobs.db
+      - STORAGE_PATH=/data
+      - ALLOWED_ORIGINS=http://localhost:3000,http://localhost
+      - FLASK_ENV=${FLASK_ENV:-production}
+      - FLASK_DEBUG=${FLASK_DEBUG:-0}
+      - GUNICORN_WORKERS=${GUNICORN_WORKERS:-4}
+      - GUNICORN_TIMEOUT=${GUNICORN_TIMEOUT:-600}
+      - GUNICORN_GRACEFUL_TIMEOUT=${GUNICORN_GRACEFUL_TIMEOUT:-600}
+      - CELERY_BROKER_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+
+  celery-worker:
+    build:
+      context: ./backend
+      args:
+        USER_ID: ${PUID:-1000}
+        GROUP_ID: ${PGID:-1000}
+    command: celery -A celery_config.celery_app worker --loglevel=info -P prefork -c ${CELERY_CONCURRENCY:-2} -Q conversion -E
+    restart: unless-stopped
+    volumes:
+      - ./app/backend/app:/app
+      - conversion-data:/data
+    environment:
+      - TZ=${TZ:-UTC}
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - DATABASE_URL=sqlite:////data/jobs.db
+      - STORAGE_PATH=/data
+    depends_on:
+      - redis
+    deploy:
+      resources:
+        limits:
+          cpus: '1.9'
+          memory: 3G
+        reservations:
+          cpus: '1.5'
+          memory: 2500M
+
+  redis:
+    image: redis:7-alpine
+    container_name: mangaconverter-foss-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  conversion-data:
+    driver: local
+  redis-data:
+    driver: local

@@ -1,0 +1,57 @@
+# Core web framework
+Flask==3.1.0
+flask-cors==5.0.1
+Werkzeug==3.1.3
+gunicorn==21.2.0
+
+# Database
+SQLAlchemy==1.4.23
+
+# Task queue
+celery==5.3.4
+redis==5.1
+# flower==2.0.1  # Optional: Celery monitoring UI
+
+# WebSocket support (optional, can be removed for polling-only)
+eventlet==0.35.2
+flask-socketio==5.3.6
+python-socketio==5.11.0
+
+# Image processing dependencies
+pillow==11.1.0
+mozjpeg-lossless-optimization==1.1.5
+natsort==8.4.0
+python-slugify==8.0.4
+
+# Data processing
+pandas==2.2.3
+numpy==1.26.4
+psutil==7.0.0
+
+# Utilities
+python-dotenv==1.0.1
+python-dateutil==2.9.0.post0
+pytz==2025.1
+click==8.1.8
+pyyaml
+requests==2.32.3
+
+# Core dependencies
+blinker==1.9.0
+certifi==2025.1.31
+charset-normalizer==3.4.1
+idna==3.10
+itsdangerous==2.2.0
+Jinja2==3.1.6
+MarkupSafe==3.0.2
+packaging==24.2
+six==1.17.0
+text-unidecode==1.3
+typing_extensions==4.12.2
+tzdata==2025.1
+urllib3==1.26.18
+
+# Testing dependencies
+pytest>=7.0.0
+pytest-flask>=1.2.0
+pytest-mock>=3.10.0

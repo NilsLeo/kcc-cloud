@@ -1,0 +1,42 @@
+FROM node:20-slim AS base
+
+ENV NEXT_TELEMETRY_DISABLED=1
+
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+
+RUN npm install -g pnpm
+
+WORKDIR /app
+
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --no-frozen-lockfile
+
+COPY . .
+
+RUN pnpm build
+
+FROM node:20-slim AS runner
+
+WORKDIR /app
+ENV NODE_ENV=production
+ENV PORT=3000
+
+RUN npm install -g pnpm
+
+# Create non-root user
+ARG USER_ID=1024
+ARG GROUP_ID=100
+RUN groupadd -g $GROUP_ID users 2>/dev/null || true && \
+    useradd -u $USER_ID -g users nextjs
+
+COPY --from=base /app/public ./public
+COPY --from=base /app/.next/standalone ./
+COPY --from=base /app/.next/static ./.next/static
+COPY --from=base /app/node_modules ./node_modules
+
+USER nextjs
+
+EXPOSE 3000
+
+CMD ["node", "server.js"]

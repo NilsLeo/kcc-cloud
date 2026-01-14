@@ -125,6 +125,7 @@ minio/data/
 # Proprietary binaries (kindlegen binary files only, keep README)
 backend/app/kindlegen/kindlegen
 **/kindlegen/kindlegen
+app/backend/app/kindlegen/kindlegen
 
 # Testing
 coverage/
