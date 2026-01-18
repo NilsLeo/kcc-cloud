@@ -3,24 +3,25 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Download, FileText, Loader2, Clock, HardDrive, AlertCircle } from "lucide-react"
+import { FileText, RefreshCw } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { formatFileSize } from "@/lib/utils"
+import { AlertCircle } from "lucide-react"
+import mockData from "@/lib/mock-data.json"
+import type { UserDownload } from "@/types/user-download"
+import { FileConversionCard } from "./file-conversion-card"
 
-export type UserDownload = {
-  job_id: string
-  original_filename: string
-  converted_filename: string
-  device_profile: string
-  input_file_size?: number
-  output_file_size?: number
-  completed_at?: string
-  actual_duration?: number
-  download_url: string
+const getStatusStages = (currentStatus: string, hasError = false) => {
+  if (hasError) {
+    return ["UPLOADING", "PROCESSING", "ERRORRED"] as const
+  }
+  if (currentStatus === "QUEUED") {
+    return ["UPLOADING", "QUEUED", "COMPLETE"] as const
+  }
+  return ["UPLOADING", "PROCESSING", "COMPLETE"] as const
 }
 
 interface MyDownloadsProps {
@@ -28,11 +29,16 @@ interface MyDownloadsProps {
 }
 
 export function MyDownloads({ limit = 100 }: MyDownloadsProps) {
+  // Demo mode is opt-in; default to false when not explicitly set
+  const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true"
+
   const [downloads, setDownloads] = useState<UserDownload[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [downloadingFiles, setDownloadingFiles] = useState<Record<string, boolean>>({})
   const [totalCount, setTotalCount] = useState(0)
+  const [usingMockData, setUsingMockData] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
 
   useEffect(() => {
     fetchDownloads()
@@ -42,53 +48,80 @@ export function MyDownloads({ limit = 100 }: MyDownloadsProps) {
     try {
       setLoading(true)
       setError(null)
+      setRefreshing(true)
 
       const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8060"
-      const response = await fetch(`${API_BASE_URL}/downloads?limit=${limit}&include_dismissed=true`)
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch downloads: ${response.status}`)
+      try {
+        console.log("[v0] Attempting to fetch from localhost:8060...")
+        const response = await fetch(`${API_BASE_URL}/downloads?limit=${limit}&include_dismissed=true`, {
+          signal: AbortSignal.timeout(3000),
+        })
+
+        if (!response.ok) {
+          throw new Error(`API returned ${response.status}`)
+        }
+
+        const data = await response.json()
+        const downloadsData = (data.downloads || []).map((download: any) => ({
+          job_id: download.job_id,
+          original_filename: download.original_filename,
+          converted_filename: download.converted_filename,
+          device_profile: download.device_profile,
+          input_file_size: download.input_file_size,
+          output_file_size: download.output_file_size,
+          completed_at: download.completed_at,
+          actual_duration: download.actual_duration,
+          download_url: `${API_BASE_URL}${download.download_url}`,
+          status: download.status || "COMPLETE",
+          progress: download.progress || 100,
+        }))
+
+        console.log("[v0] Successfully fetched from localhost:8060", { count: downloadsData.length })
+        setDownloads(downloadsData)
+        setTotalCount(data.total || downloadsData.length)
+        setUsingMockData(false)
+      } catch (apiError) {
+        if (demoMode) {
+          console.log("[v0] API not reachable, using mock data (demo mode)", {
+            error: apiError instanceof Error ? apiError.message : String(apiError),
+          })
+          await new Promise((resolve) => setTimeout(resolve, 300))
+          setDownloads(mockData.myDownloads as UserDownload[])
+          setTotalCount(mockData.myDownloads.length)
+          setUsingMockData(true)
+        } else {
+          throw apiError
+        }
       }
-
-      const data = await response.json()
-
-      // Map downloads to component format
-      const downloadsData = (data.downloads || []).map((download: any) => ({
-        job_id: download.job_id,
-        original_filename: download.original_filename,
-        converted_filename: download.converted_filename,
-        device_profile: download.device_profile,
-        input_file_size: download.input_file_size,
-        output_file_size: download.output_file_size,
-        completed_at: download.completed_at,
-        actual_duration: download.actual_duration,
-        download_url: `${API_BASE_URL}${download.download_url}`,
-      }))
-
-      setDownloads(downloadsData)
-      setTotalCount(data.total || downloadsData.length)
     } catch (error) {
       console.error("[MyDownloads] Error fetching downloads:", error)
       setError(error instanceof Error ? error.message : "Failed to load downloads")
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
   }
 
   const handleDownload = async (download: UserDownload) => {
     try {
-      setDownloadingFiles(prev => ({ ...prev, [download.job_id]: true }))
+      setDownloadingFiles((prev) => ({ ...prev, [download.job_id]: true }))
 
-      // Download the file
-      const response = await fetch(download.download_url)
+      if (usingMockData) {
+        await new Promise((resolve) => setTimeout(resolve, 1500))
+        toast.success(`Mock download: ${download.converted_filename}`)
+        setDownloadingFiles((prev) => ({ ...prev, [download.job_id]: false }))
+        return
+      }
 
+      const response = await fetch(download.download_url!)
       if (!response.ok) {
         throw new Error(`Download failed: ${response.status}`)
       }
 
       const blob = await response.blob()
       const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
+      const a = document.createElement("a")
       a.href = url
       a.download = download.converted_filename || `converted_${download.original_filename}`
       document.body.appendChild(a)
@@ -100,31 +133,78 @@ export function MyDownloads({ limit = 100 }: MyDownloadsProps) {
     } catch (error) {
       console.error("[MyDownloads] Download error:", error)
       toast.error("Failed to download file", {
-        description: error instanceof Error ? error.message : "Unknown error"
+        description: error instanceof Error ? error.message : "Unknown error",
       })
     } finally {
-      setDownloadingFiles(prev => ({ ...prev, [download.job_id]: false }))
+      setDownloadingFiles((prev) => ({ ...prev, [download.job_id]: false }))
     }
   }
+
+  const handleDeleteById = async (id: string) => {
+    const d = downloads.find((x) => x.job_id === id)
+    if (!d) {
+      toast.error("Failed to delete download", { description: "Item not found in list" })
+      return
+    }
+    await handleDelete(d)
+  }
+
+  const handleDelete = async (download: UserDownload) => {
+    if (usingMockData && demoMode) {
+      toast.info(`Delete clicked for ${download.converted_filename}`)
+      return
+    }
+
+    try {
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8060"
+      const res = await fetch(`${API_BASE_URL}/downloads/${download.job_id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || `Delete failed (${res.status})`)
+      }
+      setDownloads((prev) => prev.filter((d) => d.job_id !== download.job_id))
+      setTotalCount((c) => Math.max(0, c - 1))
+      toast.success(`Deleted ${download.converted_filename}`)
+    } catch (e) {
+      toast.error("Failed to delete download", { description: e instanceof Error ? e.message : String(e) })
+    }
+  }
+
+  
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return "Unknown"
     try {
       const date = new Date(dateString)
-      return date.toLocaleString()
+      return date.toLocaleString(undefined, {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      })
     } catch {
       return "Unknown"
     }
   }
 
   const formatDuration = (seconds?: number) => {
-    if (!seconds) return "Unknown"
-    const minutes = Math.floor(seconds / 60)
-    const remainingSeconds = seconds % 60
-    if (minutes > 0) {
-      return `${minutes}m ${remainingSeconds}s`
+    if (!seconds) return null
+
+    if (seconds < 60) {
+      return `${Math.round(seconds)}s`
     }
-    return `${seconds}s`
+
+    const minutes = Math.floor(seconds / 60)
+    const remainingSeconds = Math.round(seconds % 60)
+
+    if (remainingSeconds === 0) {
+      return `${minutes}m`
+    }
+
+    return `${minutes}m ${remainingSeconds}s`
   }
 
   if (loading) {
@@ -160,7 +240,7 @@ export function MyDownloads({ limit = 100 }: MyDownloadsProps) {
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{error}</AlertDescription>
           </Alert>
-          <Button onClick={fetchDownloads} className="mt-4" variant="outline">
+          <Button onClick={fetchDownloads} className="mt-4 bg-transparent" variant="outline">
             Try Again
           </Button>
         </CardContent>
@@ -172,7 +252,7 @@ export function MyDownloads({ limit = 100 }: MyDownloadsProps) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Recent Conversions</CardTitle>
+          <CardTitle>My Downloads</CardTitle>
           <CardDescription>No completed conversions yet</CardDescription>
         </CardHeader>
         <CardContent>
@@ -188,74 +268,64 @@ export function MyDownloads({ limit = 100 }: MyDownloadsProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Recent Conversions</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle>My Downloads</CardTitle>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={fetchDownloads}
+            disabled={refreshing}
+            aria-label="Refresh downloads list"
+            className="h-8 w-8 shrink-0"
+          >
+            <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+          </Button>
+        </div>
         <CardDescription>
-          {totalCount} completed conversion{totalCount !== 1 ? 's' : ''}
+          {totalCount} completed conversion{totalCount !== 1 ? "s" : ""}
+          {usingMockData && demoMode && (
+            <Badge variant="outline" className="ml-2 text-xs">
+              Demo Mode
+            </Badge>
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
           <AnimatePresence mode="popLayout">
-            {downloads.map((download) => (
-              <motion.div
-                key={download.job_id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, x: -100 }}
-                className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
-              >
-                <div className="flex-1 min-w-0 space-y-1">
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <p className="font-medium truncate">{download.converted_filename}</p>
-                    <Badge variant="secondary" className="flex-shrink-0">
-                      {download.device_profile}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <HardDrive className="h-3 w-3" />
-                      {formatFileSize(download.output_file_size || 0)}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {formatDate(download.completed_at)}
-                    </span>
-                    {download.actual_duration && (
-                      <span>Duration: {formatDuration(download.actual_duration)}</span>
-                    )}
-                  </div>
-                </div>
-                <Button
-                  onClick={() => handleDownload(download)}
-                  disabled={downloadingFiles[download.job_id]}
-                  size="sm"
-                  className="flex-shrink-0"
+            {downloads.map((download) => {
+              const fileData = {
+                id: download.job_id,
+                jobId: download.job_id,
+                name: download.converted_filename || download.original_filename,
+                size: download.output_file_size || download.input_file_size,
+                status: download.status,
+                upload_progress: download.status === "UPLOADING" ? { percentage: download.progress } : undefined,
+                // No processing_progress in downloads view; progress is driven by ETA in queue only
+                error: download.status === "ERROR" ? "Conversion failed" : undefined,
+                isConverted: download.status === "COMPLETE",
+              }
+
+              return (
+                <motion.div
+                  key={download.job_id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, x: -100 }}
                 >
-                  {downloadingFiles[download.job_id] ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Downloading
-                    </>
-                  ) : (
-                    <>
-                      <Download className="mr-2 h-4 w-4" />
-                      Download
-                    </>
-                  )}
-                </Button>
-              </motion.div>
-            ))}
+                  <FileConversionCard
+                    file={fileData}
+                    onDownload={() => handleDownload(download)}
+                    onDelete={(id: string) => handleDeleteById(id)}
+                    showActions={true}
+                    isDownloading={downloadingFiles[download.job_id]}
+                    context="downloads"
+                  />
+                </motion.div>
+              )
+            })}
           </AnimatePresence>
         </div>
-
-        {downloads.length > 0 && (
-          <div className="mt-4 pt-4 border-t">
-            <Button onClick={fetchDownloads} variant="outline" className="w-full">
-              Refresh List
-            </Button>
-          </div>
-        )}
       </CardContent>
     </Card>
   )

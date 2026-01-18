@@ -1,6 +1,7 @@
 FROM node:20-slim
 
-ENV NEXT_TELEMETRY_DISABLED=1
+ENV HOME=/app \
+    XDG_CACHE_HOME=/app/.cache
 
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
@@ -10,7 +11,8 @@ RUN npm install -g pnpm
 WORKDIR /app
 
 COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --no-frozen-lockfile
+RUN pnpm install --no-frozen-lockfile \
+ && pnpm next telemetry disable || true
 
 # Do NOT copy the entire source code here — it's mounted in docker-compose
 

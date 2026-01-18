@@ -1,6 +1,5 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { M_PLUS_Rounded_1c, Kosugi_Maru } from "next/font/google"
 import localFont from "next/font/local"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
@@ -8,21 +7,8 @@ import { Toaster } from "sonner"
 import { ConverterModeProvider } from "@/contexts/converter-mode-context"
 import { ErrorBoundary } from "@/components/error-boundary"
 
-const mplus = M_PLUS_Rounded_1c({
-  weight: ["400", "700", "800"],
-  subsets: ["latin"],
-  variable: "--font-mplus",
-  display: "swap",
-  preload: false,
-})
-
-const kosugiMaru = Kosugi_Maru({
-  weight: "400",
-  subsets: ["latin"],
-  variable: "--font-kosugi-maru",
-  display: "swap",
-  preload: false,
-})
+// Avoid network fetches for Google Fonts in dev containers by relying on local fonts
+// If you need Google fonts, switch back to next/font/google and ensure outbound network is available
 
 const zenMaruGothic = localFont({
   src: [
@@ -112,7 +98,7 @@ export default function RootLayout({
           <meta name="msapplication-tap-highlight" content="no" />
           <meta name="theme-color" content="hsl(var(--theme-medium))" />
         </head>
-        <body className={`${mplus.variable} ${kosugiMaru.variable} ${zenMaruGothic.variable} antialiased`}>
+        <body className={`${zenMaruGothic.variable} antialiased`}>
           <ErrorBoundary>
             <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
               <ConverterModeProvider>

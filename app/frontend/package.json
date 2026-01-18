@@ -75,6 +75,8 @@
   },
   "optionalDependencies": {
     "@next/swc-linux-arm64-gnu": "16.0.10",
-    "@next/swc-linux-arm64-musl": "16.0.10"
+    "@next/swc-linux-arm64-musl": "16.0.10",
+    "@next/swc-linux-x64-gnu": "16.0.10",
+    "@next/swc-linux-x64-musl": "16.0.10"
   }
 }

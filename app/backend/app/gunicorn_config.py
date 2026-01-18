@@ -12,8 +12,7 @@ def post_fork(server, worker):
     """
     Called just after a worker has been forked.
 
-    Note: eventlet.monkey_patch() and psycogreen.patch_psycopg() are now applied
-    in wsgi.py before any imports, which is the correct place for them.
+    Note: eventlet.monkey_patch() is applied in wsgi.py before any imports.
     """
     server.log.info(f"Worker {worker.pid} spawned")
 

@@ -77,7 +77,6 @@ class ConversionJob(Base):
     downloaded_at = Column(DateTime, nullable=True)  # When job entered DOWNLOADED status
     errored_at = Column(DateTime, nullable=True)  # When job entered ERRORED status
     cancelled_at = Column(DateTime, nullable=True)  # When job entered CANCELLED status
-    abandoned_at = Column(DateTime, nullable=True)  # When job entered ABANDONED status
     dismissed_at = Column(DateTime, nullable=True)  # When user dismissed the job from UI
 
     device_profile = Column(String(50))

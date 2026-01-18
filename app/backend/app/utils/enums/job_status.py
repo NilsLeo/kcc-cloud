@@ -16,4 +16,3 @@ class JobStatus(Enum):
     # Failure States
     ERRORED = "ERRORED"      # Conversion failed due to processing error (bad file, format issues, etc.)
     CANCELLED = "CANCELLED"  # Job was manually cancelled by user
-    ABANDONED = "ABANDONED"  # Job was automatically cancelled due to timeout or abandonment

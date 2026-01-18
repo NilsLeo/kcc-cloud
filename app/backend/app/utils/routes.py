@@ -215,7 +215,12 @@ def register_routes(app):
 
     @app.route("/jobs/<job_id>/cancel", methods=["POST"])
     def cancel_job(job_id):
-        """Cancel a conversion job."""
+        """Cancel a conversion job or dismiss it if already terminal.
+
+        - If the job is ACTIVE (UPLOADING/QUEUED/PROCESSING): cancel it.
+        - If the job is TERMINAL (COMPLETE/DOWNLOADED/ERRORED/CANCELLED): mark as dismissed.
+        Always emits a queue update and updates Redis (if available) so UI state stays in sync.
+        """
         db = get_db_session()
         try:
             job = db.query(ConversionJob).filter_by(id=job_id).first()
@@ -223,65 +228,78 @@ def register_routes(app):
             if not job:
                 return jsonify({"error": "Job not found"}), 404
 
-            if job.status in [JobStatus.COMPLETE, JobStatus.ERRORED, JobStatus.CANCELLED]:
-                return jsonify({"error": f"Cannot cancel job in {job.status.value} status"}), 400
+            # Attempt to import Redis job store for real-time queue consistency
+            try:
+                from utils.redis_job_store import RedisJobStore
+            except Exception:
+                RedisJobStore = None  # type: ignore
 
-            # Cancel Celery task if it exists
+            now = datetime.utcnow()
+
+            # If already in a terminal state, treat this as a dismiss action
+            if job.status in [
+                JobStatus.COMPLETE,
+                JobStatus.DOWNLOADED,
+                JobStatus.ERRORED,
+                JobStatus.CANCELLED,
+            ]:
+                job.dismissed_at = now
+                db.commit()
+
+                # Reflect dismissal in Redis so queue broadcasts exclude it
+                if RedisJobStore:
+                    try:
+                        RedisJobStore.update_job(job_id, {"dismissed_at": now})
+                    except Exception:
+                        pass
+
+                # Broadcast queue update (best-effort)
+                try:
+                    broadcast_queue_update()
+                except Exception as e:
+                    print(f"Warning: Could not broadcast queue update: {e}")
+
+                return jsonify({
+                    "job_id": job_id,
+                    "status": job.status.value,
+                    "dismissed": True,
+                    "message": "Job dismissed successfully",
+                }), 200
+
+            # Otherwise, cancel the active job
             if job.celery_task_id:
                 from celery_config import celery_app
                 celery_app.control.revoke(job.celery_task_id, terminate=True)
 
-            # Update job status
             job.status = JobStatus.CANCELLED
-            job.cancelled_at = datetime.utcnow()
+            job.cancelled_at = now
             job.error_message = "Job cancelled by user"
             db.commit()
 
-            # Broadcast queue update
+            # Update Redis for real-time queue
+            if RedisJobStore:
+                try:
+                    RedisJobStore.update_job(job_id, {"status": JobStatus.CANCELLED.value, "cancelled_at": now})
+                except Exception:
+                    pass
+
+            # Broadcast queue update (best-effort)
             try:
                 broadcast_queue_update()
             except Exception as e:
-                # Don't fail the request if broadcast fails
                 print(f"Warning: Could not broadcast queue update: {e}")
 
             return jsonify({
                 "job_id": job_id,
                 "status": job.status.value,
-                "message": "Job cancelled successfully"
+                "message": "Job cancelled successfully",
             }), 200
 
         finally:
             db.close()
 
-    @app.route("/jobs/<job_id>/dismiss", methods=["POST"])
-    def dismiss_job(job_id):
-        """Dismiss a job from the UI (mark as dismissed)."""
-        db = get_db_session()
-        try:
-            job = db.query(ConversionJob).filter_by(id=job_id).first()
-
-            if not job:
-                return jsonify({"error": "Job not found"}), 404
-
-            # Mark job as dismissed
-            job.dismissed_at = datetime.utcnow()
-            db.commit()
-
-            # Broadcast queue update
-            try:
-                broadcast_queue_update()
-            except Exception as e:
-                # Don't fail the request if broadcast fails
-                print(f"Warning: Could not broadcast queue update: {e}")
-
-            return jsonify({
-                "job_id": job_id,
-                "dismissed": True,
-                "message": "Job dismissed successfully"
-            }), 200
-
-        finally:
-            db.close()
+    # Legacy dismiss endpoint removed in favor of unified cancel endpoint which
+    # dismisses terminal jobs and cancels active ones.
 
     @app.route("/api/queue/status", methods=["GET"])
     def get_queue_status():

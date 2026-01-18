@@ -10,6 +10,8 @@ export interface QueueJob {
   file_size: number
   output_file_size?: number // output file size (only present for COMPLETE jobs)
   completed_at?: string // ISO timestamp when job completed
+  processing_at?: string // ISO timestamp when processing started
+  eta_at?: string // ISO timestamp when processing is expected to complete
   upload_progress?: {
     completed_parts: number
     total_parts: number
@@ -17,12 +19,7 @@ export interface QueueJob {
     total_bytes: number
     percentage: number
   }
-  processing_progress?: {
-    elapsed_seconds: number
-    remaining_seconds: number
-    projected_eta: number
-    progress_percent: number
-  }
+  // processing_progress no longer used for PROCESSING math
   queue_position?: number
 }
 
@@ -87,6 +84,16 @@ export function useQueuePolling(
     // Receive queue updates
     socket.on('queue_update', (data: QueueStatus) => {
       if (IS_DEV) console.log(`[WEBSOCKET] Received queue update: ${data.jobs?.length || 0} jobs`)
+      if (IS_DEV && data.jobs?.length) {
+        data.jobs.forEach((job) => {
+          const pp: any = (job as any).processing_progress
+          if (job.status === 'PROCESSING' && pp) {
+            console.log(
+              `[WEBSOCKET] ETA for job ${job.job_id}: eta_at=${pp.eta_at ?? 'n/a'} projected_eta=${pp.projected_eta ?? 'n/a'}s processing_at=${job.processing_at ?? 'n/a'}`,
+            )
+          }
+        })
+      }
       setQueueStatus(data)
     })
 

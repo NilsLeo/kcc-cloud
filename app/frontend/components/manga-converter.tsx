@@ -12,22 +12,18 @@ import { DEVICE_PROFILES } from "@/lib/device-profiles"
 import { fetchWithLicense } from "@/lib/utils"
 import { log, logError, logWarn } from "@/lib/logger"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { LoaderIcon, ChevronsRight, BookOpenText, BookText } from "lucide-react" // Added BookOpenText and BookText
 import { AdvancedOptions } from "./advanced-options"
 import { FileUploader } from "./file-uploader"
 import { ALL_SUPPORTED_EXTENSIONS } from "@/lib/fileValidation"
 import { DeviceSelector } from "./device-selector"
 import { Label } from "@/components/ui/label"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { useConverterMode } from "@/contexts/converter-mode-context"
 import { useQueuePolling, type QueueJob } from "@/hooks/useQueuePolling"
 import { useJobWebSocket } from "@/hooks/useJobWebSocket" // Imported JobStatusData
-import { MyDownloads } from "./my-downloads"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { ChevronDown, ChevronUp, Download } from "lucide-react"
 import { cn } from "@/lib/utils" // Imported cn for conditional styling
+import { DownloadsPreviewCard } from "./downloads-preview-card" // Import DownloadsPreviewCard instead of using MyDownloads inline
 
 export type PendingUpload = {
   name: string
@@ -46,11 +42,11 @@ export type PendingUpload = {
   actualDuration?: number // Time taken for conversion
   queuedAt?: number // Timestamp when job entered QUEUED status (for calculating download progress)
   processing_progress?: {
-    elapsed_seconds: number
-    remaining_seconds: number
-    projected_eta: number
-    progress_percent: number
+    eta_at?: string
+    projected_eta?: number
   }
+  eta_at?: string
+  processing_at?: string
   upload_progress?: {
     completed_parts: number
     total_parts: number
@@ -249,8 +245,12 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
     if (queueStatus.jobs.length > 0) {
       log(`[WEBSOCKET] Received ${queueStatus.jobs.length} job(s):`)
       queueStatus.jobs.forEach((job: QueueJob) => {
+        const pp = (job as any).processing_progress
         log(`  - Job ${job.job_id}: ${job.status} | ${job.filename}`, {
           completed_at: job.completed_at || null,
+          eta_at: (job as any).eta_at ?? pp?.eta_at,
+          projected_eta: pp?.projected_eta,
+          processing_at: (job as any).processing_at,
         })
       })
     } else {
@@ -260,7 +260,29 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
     // Process all jobs from WebSocket session update
     queueStatus.jobs.forEach((job: QueueJob) => {
       setPendingUploads((prev) => {
-        const existingFile = prev.find((f) => f.jobId === job.job_id)
+        // Try to match by exact job_id first
+        let existingFile = prev.find((f) => f.jobId === job.job_id)
+
+        // If not found, reconcile a likely local placeholder (same name/size, uploading or missing id)
+        if (!existingFile) {
+          const candidateIndex = prev.findIndex(
+            (f) => (!f.jobId || f.status === "UPLOADING") && f.name === job.filename && f.size === job.file_size,
+          )
+          if (candidateIndex !== -1) {
+            const reconciled = { ...prev[candidateIndex] }
+            reconciled.jobId = job.job_id
+            reconciled.status = job.status
+            reconciled.processing_progress = job.processing_progress
+            ;(reconciled as any).processing_at = (job as any).processing_at
+            ;(reconciled as any).eta_at = (job as any).eta_at
+            reconciled.upload_progress = job.upload_progress
+            reconciled.worker_download_speed_mbps = job.worker_download_speed_mbps
+
+            const next = [...prev]
+            next[candidateIndex] = reconciled
+            return next
+          }
+        }
 
         if (!existingFile) {
           // Skip jobs being cancelled - they're in the process of being removed
@@ -298,6 +320,8 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
             isMonitoring: true,
             deviceProfile: job.device_profile,
             processing_progress: job.processing_progress,
+            eta_at: (job as any).eta_at,
+            processing_at: (job as any).processing_at,
             upload_progress: job.upload_progress,
             worker_download_speed_mbps: job.worker_download_speed_mbps,
             error: job.status === "ERRORED" ? true : undefined,
@@ -309,10 +333,6 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
             newUpload.convertedName = job.output_filename || job.filename // Use output filename if available
             newUpload.downloadId = job.job_id
             newUpload.convertedTimestamp = job.completed_at ? new Date(job.completed_at).getTime() : Date.now()
-            // Only show toast if just completed (within last 10s) and not yet shown
-            // Suppress completion toast
-
-            // Also show a completed card in the queue UI
             return [...prev, newUpload]
           }
 
@@ -349,11 +369,20 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
               }
             }
 
+            // Preserve existing processing_progress if backend snapshot omits it; FE uses it to drive ETA/progress
+            // Base preservation on the incoming job.status (not previous f.status) so we don't drop it when transitioning into PROCESSING
+            const mergedProcessingProgress =
+              job.processing_progress ?? (job.status === 'PROCESSING' ? (f as any).processing_progress : undefined)
+            // Preserve last known upload progress so the lighter overlay stays visible after UPLOADING
+            const mergedUploadProgress = job.upload_progress ?? (f as any).upload_progress
+
             const updated = {
               ...f,
               status: job.status,
-              processing_progress: job.processing_progress,
-              upload_progress: job.upload_progress,
+              processing_progress: mergedProcessingProgress,
+              processing_at: (job as any).processing_at ?? (f as any).processing_at,
+              eta_at: (job as any).eta_at ?? (f as any).eta_at,
+              upload_progress: mergedUploadProgress,
               worker_download_speed_mbps: job.worker_download_speed_mbps,
               // Set queuedAt timestamp when job first enters QUEUED status
               queuedAt: job.status === "QUEUED" && f.status !== "QUEUED" ? Date.now() : f.queuedAt,
@@ -386,6 +415,9 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
       return prev.filter((file) => {
         // Keep files without jobId (not yet uploaded)
         if (!file.jobId) return true
+
+        // Keep local in-flight uploads even if backend snapshot doesn't include them yet
+        if (file.status === "UPLOADING") return true
 
         // Keep files that are in the latest WebSocket update
         if (wsJobIds.has(file.jobId)) return true
@@ -427,56 +459,69 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
               completed_at: statusData.completed_at || null,
             })
 
-            // Reset stage progress between phases
-            if (statusData.status === "QUEUED" || statusData.status === "PROCESSING") {
-              // </CHANGE> Removed conversionProgress and eta/remainingTime resets
-              // They are now handled within handleConvert and the job status updates
-              lastLoggedProgressRef.current = -1
+            // Log status changes
+            if (f.status !== statusData.status) {
+              log(`[STATUS CHANGE] Job ${jobId}: ${f.status || "NEW"} → ${statusData.status}`, {
+                job_id: jobId,
+                filename: f.name,
+                old_status: f.status || "NEW",
+                new_status: statusData.status,
+                device_profile: statusData.device_profile,
+                completed_at: statusData.completed_at || null,
+              })
+
+              // Reset stage progress between phases
+              if (statusData.status === "QUEUED" || statusData.status === "PROCESSING") {
+                // </CHANGE> Removed conversionProgress and eta/remainingTime resets
+                // They are now handled within handleConvert and the job status updates
+                lastLoggedProgressRef.current = -1
+              }
             }
+
+            const updated: PendingUpload = {
+              ...f,
+              status: statusData.status,
+              processing_progress: statusData.processing_progress,
+              upload_progress: statusData.upload_progress,
+              worker_download_speed_mbps: statusData.worker_download_speed_mbps,
+              // Set queuedAt timestamp when job first enters QUEUED status
+              queuedAt: statusData.status === "QUEUED" && f.status !== "QUEUED" ? Date.now() : f.queuedAt,
+            }
+
+            // Handle completion
+            if (statusData.status === "COMPLETE") {
+              updated.isConverted = true
+              updated.convertedName = statusData.output_filename || f.name
+              updated.downloadId = jobId
+              updated.convertedTimestamp = statusData.completed_at
+                ? new Date(statusData.completed_at).getTime()
+                : Date.now()
+              updated.outputFileSize = statusData.file_size
+              updated.inputFileSize = statusData.input_file_size
+              updated.actualDuration = statusData.actual_duration
+              updated.downloadUrl = statusData.download_url // Added download URL
+
+              // Only show toast if just completed (within last 10s) and not yet shown
+              // Suppress completion toast
+            }
+
+            return updated
           }
 
-          const updated: PendingUpload = {
-            ...f,
-            status: statusData.status,
-            processing_progress: statusData.processing_progress,
-            upload_progress: statusData.upload_progress,
-            worker_download_speed_mbps: statusData.worker_download_speed_mbps,
-            // Set queuedAt timestamp when job first enters QUEUED status
-            queuedAt: statusData.status === "QUEUED" && f.status !== "QUEUED" ? Date.now() : f.queuedAt,
-          }
+          // Remove jobs that are no longer present in the jobStatuses update
+          // This ensures jobs that complete or are cancelled via other means are removed
+          setPendingUploads((prev) =>
+            prev.filter((file) => {
+              if (!file.jobId) return true // Keep files not yet uploaded
+              if (file.status === "UPLOADING") return true // Keep in-flight uploads not yet in per-job WS map
+              if (jobStatuses.hasOwnProperty(file.jobId)) return true // Keep files being monitored
+              if (cancellingJobs.has(file.jobId)) return true // Keep files being cancelled
 
-          // Handle completion
-          if (statusData.status === "COMPLETE") {
-            updated.isConverted = true
-            updated.convertedName = statusData.output_filename || f.name
-            updated.downloadId = jobId
-            updated.convertedTimestamp = statusData.completed_at
-              ? new Date(statusData.completed_at).getTime()
-              : Date.now()
-            updated.outputFileSize = statusData.file_size
-            updated.inputFileSize = statusData.input_file_size
-            updated.actualDuration = statusData.actual_duration
-            updated.downloadUrl = statusData.download_url // Added download URL
-
-            // Only show toast if just completed (within last 10s) and not yet shown
-            // Suppress completion toast
-          }
-
-          return updated
-        }),
-      )
-
-      // Remove jobs that are no longer present in the jobStatuses update
-      // This ensures jobs that complete or are cancelled via other means are removed
-      setPendingUploads((prev) =>
-        prev.filter((file) => {
-          if (!file.jobId) return true // Keep files not yet uploaded
-          if (jobStatuses.hasOwnProperty(file.jobId)) return true // Keep files being monitored
-          if (cancellingJobs.has(file.jobId)) return true // Keep files being cancelled
-
-          // Remove all other jobs that are missing from this update
-          log(`[JOB WS] Removing job ${file.jobId} (${file.name}) - no longer in queue update`)
-          return false
+              // Remove all other jobs that are missing from this update
+              log(`[JOB WS] Removing job ${file.jobId} (${file.name}) - no longer in queue update`)
+              return false
+            }),
+          )
         }),
       )
     })
@@ -487,22 +532,22 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
 
   const removeJobFromStorage = (_jobId: string, _force = false) => {}
 
-  // Dismiss job from UI (mark as dismissed in backend)
+  // Cancel job or remove from queue (unified)
   const handleDismissJob = async (file: PendingUpload) => {
     if (!file.jobId) {
-      logError("Cannot dismiss: No job ID")
+      logError("Cannot cancel: No job ID")
       return
     }
 
-    log("[v0] Dismissing job:", file.jobId, "file:", file.name)
+    log("[v0] Cancel/Remove job:", file.jobId, "file:", file.name)
 
     // Remove from UI immediately for better UX
     setPendingUploads((prev) => prev.filter((f) => f.jobId !== file.jobId))
-    toast.success(`Removed: ${file.name}`)
+    toast.success(`Cancelled ${file.name}`)
 
-    // Call backend to mark as dismissed
+    // Call backend unified cancel endpoint (also acts as dismiss for completed jobs)
     try {
-      const response = await fetchWithLicense(`${apiUrl}/jobs/${file.jobId}/dismiss`, {
+      const response = await fetchWithLicense(`${apiUrl}/jobs/${file.jobId}/cancel`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -511,12 +556,12 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
 
       if (!response.ok) {
         const error = await response.json()
-        log("[v0] Backend dismiss warning (job already removed from UI):", error.error || "Unknown error")
+        log("[v0] Backend cancel warning (job already removed from UI):", error.error || "Unknown error")
       } else {
-        log("[v0] Job dismissed successfully:", file.jobId)
+        log("[v0] Job cancel/remove succeeded:", file.jobId)
       }
     } catch (error) {
-      log("[v0] Dismiss request failed (job already removed from UI):", error instanceof Error ? error.message : "Unknown error")
+      log("[v0] Cancel request failed (job already removed from UI):", error instanceof Error ? error.message : "Unknown error")
     }
   }
 
@@ -695,8 +740,8 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
     const filesToProcess = filesToConvert
     let hasErrors = false
 
-    // Process all files in parallel instead of sequentially
-    const uploadPromises = filesToProcess.map(async (currentFile, i) => {
+    // Process files sequentially for simpler UX/state handling
+    for (const currentFile of filesToProcess) {
       // Generate jobId for the current file if not already set
       const jobId: string = currentFile.jobId || uuidv4()
 
@@ -857,14 +902,32 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
           throw new Error(`Upload initialization failed: ${uploadInitError.message}`)
         }
 
-        // Wait for upload to complete
+        // Wait for upload to complete and capture server-assigned job id
         const uploadCompletePromise = uploadPromise
         log(`Job ${jobId} submitted; polling will track progress`)
 
-        // Wait for upload to complete
-        await uploadCompletePromise
+        const { job_id: serverJobId } = await uploadCompletePromise
 
-        log("Upload complete for job", jobId, { filename: currentFile.name })
+        // Reconcile local jobId with server-assigned job_id so WebSocket updates match
+        if (serverJobId && serverJobId !== jobId) {
+          setPendingUploads((prev) =>
+            prev.map((f) =>
+              f.jobId === jobId
+                ? {
+                    ...f,
+                    jobId: serverJobId,
+                  }
+                : f,
+            ),
+          )
+          log("Reconciled local jobId with server job_id", serverJobId, {
+            old_job_id: jobId,
+            new_job_id: serverJobId,
+            filename: currentFile.name,
+          })
+        }
+
+        log("Upload complete for job", serverJobId || jobId, { filename: currentFile.name })
 
         // Session-based WebSocket updates (subscribe_session) will update status post-finalize
         // No per-job subscribe needed; avoids early DB lookup race conditions
@@ -921,10 +984,9 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
           duration: 8000,
         })
       }
-    })
+    }
 
-    // Wait for all files to complete uploading and converting in parallel
-    await Promise.all(uploadPromises)
+    // All files processed (sequentially)
 
     log("All files processed", { totalFiles: filesToProcess.length })
 
@@ -1186,7 +1248,7 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
 
   return (
     <>
-      <div className="flex flex-col gap-6 max-w-6xl mx-auto pb-24">
+      <div className="flex flex-col space-y-6 px-4 pb-8">
         <section className="text-center space-y-4">
           {/* Mode Switcher - Prominent and Interactive */}
           <div className="inline-flex items-center gap-2 p-1.5 rounded-full bg-muted/50 backdrop-blur-sm border shadow-sm">
@@ -1219,12 +1281,7 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
           </div>
 
           {/* Animated Title */}
-          <h1
-            className={cn(
-              "text-4xl font-bold tracking-tight transition-all duration-300",
-              isComic ? "font-bungee" : "font-kosugi-maru",
-            )}
-          >
+          <h1 className="text-5xl font-bold text-center mt-8 tracking-tight font-bungee uppercase">
             {isComic ? "COMIC CONVERTER" : "MANGA CONVERTER"}
           </h1>
           <p className="text-lg text-muted-foreground">
@@ -1236,101 +1293,54 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
 
         {/* FOSS version - no signup required, no user downloads tracking */}
 
-        {/* My Downloads - Always show in FOSS version (local only) */}
-        {true && (
-          <Collapsible open={downloadsOpen} onOpenChange={setDownloadsOpen}>
-            <CollapsibleTrigger asChild>
-              <Card className="cursor-pointer hover:border-primary/50 transition-colors">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Download className="h-5 w-5" />
-                      <div>
-                        <CardTitle>My Downloads</CardTitle>
-                        <CardDescription className="mt-1">
-                          {downloadsOpen
-                            ? "Click to collapse"
-                            : "All your converted files stored locally"}
-                        </CardDescription>
-                      </div>
-                    </div>
-                    {downloadsOpen ? (
-                      <ChevronUp className="h-5 w-5 text-muted-foreground shrink-0" />
-                    ) : (
-                      <ChevronDown className="h-5 w-5 text-muted-foreground shrink-0" />
-                    )}
-                  </div>
-                </CardHeader>
-              </Card>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="mt-3">
-              <MyDownloads limit={50} />
-            </CollapsibleContent>
-          </Collapsible>
-        )}
+        <DownloadsPreviewCard />
 
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Files</CardTitle>
-                <CardDescription>
-                  {pendingUploads.length > 0
-                    ? `${pendingUploads.length} file${pendingUploads.length !== 1 ? "s" : ""} ${getValidFileCount() > 0 ? `(${getValidFileCount()} ready to convert)` : "(all converted)"}`
-                    : "Upload your comic or manga files to get started"}
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {isInitializing ? (
-              <div className="flex items-center justify-center py-12">
-                <LoaderIcon className="h-8 w-8 animate-spin text-muted-foreground" />
-              </div>
-            ) : pendingUploads.length === 0 ? (
-              <FileUploader
-                onFilesSelected={handleFileUpload}
-                disabled={isConverting}
-                acceptedTypes={ALL_SUPPORTED_EXTENSIONS}
-                maxFiles={MAX_FILES}
-                contentType={contentType}
-              />
-            ) : (
-              <>
-                <ConversionQueue
-                  pendingUploads={pendingUploads}
-                  isConverting={isConverting}
-                  onConvert={handleConvert}
-                  onCancelJob={handleCancelJob}
-                  selectedProfile={selectedProfile}
-                  globalAdvancedOptions={advancedOptions}
-                  onReorder={handleReorder}
-                  showAsUploadedFiles={false}
-                  onRemoveFile={(file) => setPendingUploads((prev) => prev.filter((f) => f !== file))}
-                  onDismissJob={handleDismissJob}
-                  cancellingJobs={cancellingJobs}
-                  isUploaded={isUploaded}
-                  currentStatus={currentStatus}
-                  deviceProfiles={DEVICE_PROFILES}
-                  onAddMoreFiles={handleAddMoreFiles}
-                  onNeedsConfiguration={handleNeedsConfiguration}
-                  onOpenSidebar={() => setSidebarOpen(true)}
-                  onStartConversion={handleConvertButtonClick}
-                  isReadyToConvert={isReadyToConvert}
-                />
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileInputChange}
-                  accept={ALL_SUPPORTED_EXTENSIONS.join(",")}
-                  multiple
-                  className="hidden"
-                  disabled={isConverting}
-                />
-              </>
-            )}
-          </CardContent>
-        </Card>
+        {isInitializing ? (
+          <div className="flex items-center justify-center py-12">
+            <LoaderIcon className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : pendingUploads.length === 0 ? (
+          <FileUploader
+            onFilesSelected={handleFileUpload}
+            disabled={isConverting}
+            acceptedTypes={ALL_SUPPORTED_EXTENSIONS}
+            maxFiles={MAX_FILES}
+            contentType={contentType}
+          />
+        ) : (
+          <>
+            <ConversionQueue
+              pendingUploads={pendingUploads}
+              isConverting={isConverting}
+              onConvert={handleConvert}
+              onCancelJob={handleCancelJob}
+              selectedProfile={selectedProfile}
+              globalAdvancedOptions={advancedOptions}
+              onReorder={handleReorder}
+              showAsUploadedFiles={false}
+              onRemoveFile={(file) => setPendingUploads((prev) => prev.filter((f) => f !== file))}
+              onDismissJob={handleDismissJob}
+              cancellingJobs={cancellingJobs}
+              isUploaded={isUploaded}
+              currentStatus={currentStatus}
+              deviceProfiles={DEVICE_PROFILES}
+              onAddMoreFiles={handleAddMoreFiles}
+              onNeedsConfiguration={handleNeedsConfiguration}
+              onOpenSidebar={() => setSidebarOpen(true)}
+              onStartConversion={handleConvertButtonClick}
+              isReadyToConvert={isReadyToConvert}
+            />
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileInputChange}
+              accept={ALL_SUPPORTED_EXTENSIONS.join(",")}
+              multiple
+              className="hidden"
+              disabled={isConverting}
+            />
+          </>
+        )}
 
         <Footer />
       </div>
@@ -1377,7 +1387,22 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
 
           <div className="sticky bottom-0 left-0 right-0 p-6 bg-background/95 backdrop-blur-sm border-t shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
             <Button
-              onClick={handleApplySettings}
+              onClick={() => {
+                if (!areSettingsValid()) {
+                  if (selectedProfile === "Placeholder") {
+                    toast.warning("No device selected", {
+                      description: "Please select your E-Reader device before applying settings.",
+                    })
+                  } else if (selectedProfile === "OTHER") {
+                    toast.warning("Missing required settings", {
+                      description:
+                        "Custom width, height, and output format (not 'Auto') are required when using 'Other' device profile.",
+                    })
+                  }
+                  return
+                }
+                handleApplySettings()
+              }}
               disabled={!areSettingsValid()}
               size="lg"
               className={`w-full ${

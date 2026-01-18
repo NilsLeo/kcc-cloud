@@ -137,6 +137,14 @@ export function FileUploader({
     fileInputRef.current?.click()
   }
 
+  const handleDisabledClick = () => {
+    if (disabled) {
+      toast.info("Please wait", {
+        description: "File uploads are currently disabled. Please wait for the current conversion to complete.",
+      })
+    }
+  }
+
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return "0 Bytes"
     const k = 1024
@@ -153,9 +161,11 @@ export function FileUploader({
 
   const KonohaIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" className="h-12 w-12 fill-theme-medium">
-<path d="M38.892 14.296C26.973 19.323 15.061 32.693 15.01 41.102c-.009 1.359-2.437 8.367-13.59 39.218L.039 84.141l27.731-.321c31.091-.359 32.628-.667 41.006-8.237 18.829-17.01 3.415-50.678-20.822-45.48-20.01 4.292-21.144 34.431-1.379 36.658 12.603 1.421 18.192-11.422 8.707-20.006-1.841-1.666-2.037-1.62-4.623 1.079-2.699 2.817-2.699 2.82-.68 4.647 4.522 4.092 1.159 8.906-4.439 6.355-6.306-2.873-7.474-12.102-2.199-17.377 13.386-13.386 34.151 8.644 23.31 24.731-16.699 24.779-55.114-1.28-42.293-28.69 8.743-18.692 31.564-23.429 50.15-10.41l5.702 3.995 7.395-5.566c8.152-6.136 8.232-6.278 5.458-9.658-2.098-2.557-1.74-2.656-8.938 2.474l-3.978 2.835-8.663-4.293c-11.285-5.592-23.213-6.537-32.592-2.581M16 62.281c0 .371-1.105 3.609-2.455 7.196L11.09 76h15.259l-2.071-2.25c-1.138-1.237-3.467-4.476-5.174-7.196C17.397 63.834 16 61.911 16 62.281" fillRule="evenodd"/>
-
-</svg>
+      <path
+        d="M38.892 14.296C26.973 19.323 15.061 32.693 15.01 41.102c-.009 1.359-2.437 8.367-13.59 39.218L.039 84.141l27.731-.321c31.091-.359 32.628-.667 41.006-8.237 18.829-17.01 3.415-50.678-20.822-45.48-20.01 4.292-21.144 34.431-1.379 36.658 12.603 1.421 18.192-11.422 8.707-20.006-1.841-1.666-2.037-1.62-4.623 1.079-2.699 2.817-2.699 2.82-.68 4.647 4.522 4.092 1.159 8.906-4.439 6.355-6.306-2.873-7.474-12.102-2.199-17.377 13.386-13.386 34.151 8.644 23.31 24.731-16.699 24.779-55.114-1.28-42.293-28.69 8.743-18.692 31.564-23.429 50.15-10.41l5.702 3.995 7.395-5.566c8.152-6.136 8.232-6.278 5.458-9.658-2.098-2.557-1.74-2.656-8.938 2.474l-3.978 2.835-8.663-4.293c-11.285-5.592-23.213-6.537-32.592-2.581M16 62.281c0 .371-1.105 3.609-2.455 7.196L11.09 76h15.259l-2.071-2.25c-1.138-1.237-3.467-4.476-5.174-7.196C17.397 63.834 16 61.911 16 62.281"
+        fillRule="evenodd"
+      />
+    </svg>
   )
 
   if (compact) {
@@ -171,13 +181,14 @@ export function FileUploader({
         onDrop={handleDrop}
         onMouseEnter={() => setIsHoveringIcon(true)}
         onMouseLeave={() => setIsHoveringIcon(false)}
+        onClick={disabled ? handleDisabledClick : undefined}
       >
         <div className="absolute inset-0 bg-background/95 -z-10" />
         <div className="flex items-center justify-between gap-4 relative z-10">
           <div className="flex items-center gap-3">
             <div
               className="rounded-full bg-muted p-2 transition-all duration-300 cursor-pointer"
-              onClick={handleButtonClick}
+              onClick={disabled ? handleDisabledClick : handleButtonClick}
             >
               {isHoveringIcon || isDragging ? (
                 contentType === "comic" ? (
@@ -198,7 +209,12 @@ export function FileUploader({
               <p className="text-xs text-muted-foreground">Drag & drop or click to browse</p>
             </div>
           </div>
-          <Button onClick={handleButtonClick} disabled={disabled} size="sm" variant="outline">
+          <Button
+            onClick={disabled ? handleDisabledClick : handleButtonClick}
+            disabled={disabled}
+            size="sm"
+            variant="outline"
+          >
             <FileUp className="mr-2 h-3 w-3" />
             Browse
           </Button>
@@ -223,7 +239,7 @@ export function FileUploader({
         isDragging ? "border-primary border-dashed scale-[1.01] shadow-md" : "border-input dark:border-input",
       )}
     >
-      <CardContent className="p-6 relative z-10">
+      <CardContent className="relative z-10">
         <div
           className="flex flex-col items-center justify-center gap-4 py-8"
           onDragOver={handleDragOver}
@@ -231,6 +247,7 @@ export function FileUploader({
           onDrop={handleDrop}
           onMouseEnter={() => setIsHoveringIcon(true)}
           onMouseLeave={() => setIsHoveringIcon(false)}
+          onClick={disabled ? handleDisabledClick : undefined}
         >
           <motion.div
             className="rounded-full bg-muted p-6 cursor-pointer"
@@ -238,7 +255,7 @@ export function FileUploader({
               scale: isDragging ? 1.1 : 1,
             }}
             transition={{ type: "spring", stiffness: 300, damping: 15 }}
-            onClick={handleButtonClick}
+            onClick={disabled ? handleDisabledClick : handleButtonClick}
           >
             {isHoveringIcon || isDragging ? (
               contentType === "comic" ? (
@@ -258,7 +275,12 @@ export function FileUploader({
               Maximum file size: <span className="font-medium text-primary">{formatFileSize(maxFileSize)}</span>
             </p>
           </div>
-          <Button onClick={handleButtonClick} disabled={disabled} className="mt-2" size="lg">
+          <Button
+            onClick={disabled ? handleDisabledClick : handleButtonClick}
+            disabled={disabled}
+            className="mt-2"
+            size="lg"
+          >
             <FileUp className="mr-2 h-4 w-4" />
             Choose files
           </Button>

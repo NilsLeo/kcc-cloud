@@ -22,6 +22,7 @@ pillow==11.1.0
 mozjpeg-lossless-optimization==1.1.5
 natsort==8.4.0
 python-slugify==8.0.4
+watchdog==3.0.0  # Filesystem event monitoring for real-time progress
 
 # Data processing
 pandas==2.2.3

@@ -7,7 +7,6 @@ Jobs are persisted to PostgreSQL only when they reach terminal states:
 - DOWNLOADED
 - CANCELLED
 - ERROR
-- ABANDONED
 
 Benefits:
 - Instant job creation (no DB commit latency)
@@ -52,7 +51,7 @@ class RedisJobStore:
 
     Schema:
         job:{job_id} -> Hash with all job fields
-        job:{job_id}:ttl -> 24 hours (auto-cleanup abandoned jobs)
+        job:{job_id}:ttl -> 24 hours (auto-cleanup via TTL)
         session:{session_key}:jobs -> Set of job_ids for user's jobs
     """
 
@@ -278,6 +277,152 @@ class RedisJobStore:
             return []
 
     @staticmethod
+    def get_all_active_jobs() -> List[Dict[str, Any]]:
+        """
+        Get all active jobs globally from Redis (no DB access).
+
+        Includes jobs in QUEUED, UPLOADING, PROCESSING, and COMPLETE states
+        (COMPLETE is included so users can immediately download from the queue view).
+        Dismissed jobs and terminal states other than COMPLETE are excluded.
+
+        Returns a list of job dicts shaped like queue_update payload items.
+        """
+        if not redis_client:
+            logger.error("[RedisJobStore] Redis unavailable")
+            return []
+
+        try:
+            jobs: List[Dict[str, Any]] = []
+            # Iterate over job:* keys, but exclude suffix keys like job:*:logs
+            for key in redis_client.scan_iter(match="job:*"):
+                # Only accept keys with exactly one colon: job:{id}
+                if key.count(":") != 1:
+                    continue
+                _, job_id = key.split(":", 1)
+
+                job_data = RedisJobStore.get_job(job_id)
+                if not job_data:
+                    continue
+
+                # Skip dismissed
+                if job_data.get('dismissed_at'):
+                    continue
+
+                raw_status = job_data.get('status', 'UNKNOWN')
+                # Skip terminal states except COMPLETE
+                if raw_status in ['DOWNLOADED', 'CANCELLED', 'ERRORED']:
+                    continue
+
+                # Normalize created_at to JSON-serializable ISO string if present
+                _created = job_data.get('created_at', None)
+                if _created is not None and hasattr(_created, 'isoformat'):
+                    _created = _created.isoformat()
+
+                # Decide emitted status (gated PROCESSING requires ETA + processing_at)
+                emit_status = raw_status
+                emit_proc_at: Any = None
+                emit_eta: Any = None
+                if raw_status == 'PROCESSING':
+                    try:
+                        proc_at = job_data.get('processing_at') or job_data.get('processing_started_at')
+                        eta_at = None
+                        projected_eta = None
+                        raw_pp = job_data.get('processing_progress')
+                        if raw_pp:
+                            import json as _json
+                            parsed = _json.loads(raw_pp) if isinstance(raw_pp, str) else raw_pp
+                            eta_at = parsed.get('eta_at')
+                            projected_eta = parsed.get('projected_eta')
+                        if eta_at is None and projected_eta is None:
+                            projected_eta = job_data.get('estimated_duration_seconds')
+                        if proc_at and (eta_at is not None or projected_eta is not None):
+                            emit_proc_at = proc_at
+                            # Prefer eta_at absolute timestamp; fallback to seconds
+                            if eta_at is not None:
+                                emit_eta = str(eta_at)
+                            else:
+                                emit_eta = int(projected_eta) if isinstance(projected_eta, (int, str)) else projected_eta
+                        else:
+                            emit_status = 'QUEUED'
+                    except Exception:
+                        emit_status = 'QUEUED'
+
+                job_dict: Dict[str, Any] = {
+                    'job_id': job_id,
+                    'filename': job_data.get('input_filename', ''),
+                    'status': emit_status,
+                    'device_profile': job_data.get('device_profile', ''),
+                    'file_size': int(job_data.get('file_size', 0) or 0),
+                    'created_at': _created,
+                }
+
+                if emit_status == 'PROCESSING' and (emit_proc_at is not None and emit_eta is not None):
+                    # Provide only timestamps: processing_at and eta_at (absolute). FE will do all math.
+                    proc_iso = emit_proc_at.isoformat() if hasattr(emit_proc_at, 'isoformat') else str(emit_proc_at)
+                    if proc_iso and ('Z' not in proc_iso and '+' not in proc_iso and '-' not in proc_iso.split('T')[-1]):
+                        proc_iso = proc_iso + 'Z'
+                    job_dict['processing_at'] = proc_iso
+
+                    # Compute eta_at string if needed
+                    if isinstance(emit_eta, str):
+                        eta_at_str = emit_eta
+                    else:
+                        try:
+                            from datetime import datetime, timedelta
+                            base = proc_iso
+                            if base.endswith('Z'):
+                                base = base[:-1] + '+00:00'
+                            eta_at_str = (datetime.fromisoformat(base) + timedelta(seconds=int(emit_eta))).isoformat()
+                        except Exception:
+                            eta_at_str = None
+                    if eta_at_str is not None and ('Z' not in eta_at_str and '+' not in eta_at_str and '-' not in eta_at_str.split('T')[-1]):
+                        eta_at_str = eta_at_str + 'Z'
+                    if eta_at_str is not None:
+                        job_dict['eta_at'] = eta_at_str
+
+                if emit_status == 'UPLOADING':
+                    parts_key = f"multipart_parts:{job_id}"
+                    try:
+                        parts_count = redis_client.hlen(parts_key)
+                    except Exception:
+                        parts_count = 0
+                    s3_parts_total = int(job_data.get('s3_parts_total', 0) or 0)
+                    if parts_count > 0 and s3_parts_total:
+                        job_dict['upload_progress'] = {
+                            'completed_parts': parts_count,
+                            'total_parts': s3_parts_total,
+                            'uploaded_bytes': int(job_data.get('upload_progress_bytes', 0) or 0),
+                            'total_bytes': int(job_data.get('file_size', 0) or 0),
+                            'percentage': round((parts_count / s3_parts_total) * 100, 1),
+                        }
+
+                if emit_status == 'COMPLETE':
+                    job_dict['output_filename'] = job_data.get('output_filename', '')
+                    job_dict['output_file_size'] = int(job_data.get('output_file_size', 0) or 0)
+                    try:
+                        completed_at = job_data.get('completed_at')
+                        if completed_at:
+                            job_dict['completed_at'] = completed_at.isoformat() if hasattr(completed_at, 'isoformat') else str(completed_at)
+                    except Exception:
+                        pass
+
+                jobs.append(job_dict)
+
+            # Sort by created_at if present, else by job_id stable order; newest first not guaranteed via Redis
+            try:
+                def _key(j):
+                    return j.get('created_at') or ''
+                jobs.sort(key=_key, reverse=True)
+            except Exception:
+                pass
+
+            return jobs
+
+        except Exception as e:
+            logger.error(f"[RedisJobStore] Failed to list active jobs: {e}")
+            return []
+
+    @staticmethod
     def is_terminal_state(status: str) -> bool:
         """
         Check if a job status is terminal (ready for DB persistence).
@@ -288,7 +433,7 @@ class RedisJobStore:
         Returns:
             bool: True if terminal state
         """
-        terminal_states = ['COMPLETE', 'DOWNLOADED', 'CANCELLED', 'ERROR', 'ABANDONED']
+        terminal_states = ['COMPLETE', 'DOWNLOADED', 'CANCELLED', 'ERROR']
         return status in terminal_states
 
     @staticmethod
@@ -382,7 +527,7 @@ class RedisJobStore:
                 # Clean up Redis: remove from session set only for truly terminal states (not COMPLETE)
                 # COMPLETE jobs should remain visible so users can download them
                 status = job_data.get('status', '')
-                if status in ['DOWNLOADED', 'CANCELLED', 'ERRORED', 'ABANDONED']:
+                if status in ['DOWNLOADED', 'CANCELLED', 'ERRORED']:
                     session_key = job_data.get('session_key')
                     if session_key and redis_client:
                         try:
@@ -588,26 +733,60 @@ def get_active_jobs_for_session(session_key: str) -> List[Dict[str, Any]]:
                 continue
 
             # Skip jobs in terminal states EXCEPT COMPLETE (users need to see COMPLETE jobs)
-            status = job_data.get('status', 'UNKNOWN')
-            if status in ['DOWNLOADED', 'CANCELLED', 'ERRORED', 'ABANDONED']:
-                logger.debug(f"Skipping terminal state job {job_id} with status {status}")
+            raw_status = job_data.get('status', 'UNKNOWN')
+            if raw_status in ['DOWNLOADED', 'CANCELLED', 'ERRORED']:
+                logger.debug(f"Skipping terminal state job {job_id} with status {raw_status}")
                 continue
 
             # Format job for API response (same format as /api/queue/status)
+            # Normalize datetime fields to JSON-serializable strings
+            _created = job_data.get('created_at')
+            if _created is not None and hasattr(_created, 'isoformat'):
+                _created = _created.isoformat()
+
+            # Compute emitted status with gating for PROCESSING (requires ETA + processing_at)
+            emit_status = raw_status
+            emit_proc_at: Any = None
+            emit_eta: Any = None
+            if raw_status == 'PROCESSING':
+                try:
+                    proc_at = job_data.get('processing_at') or job_data.get('processing_started_at')
+                    eta_at = None
+                    projected_eta = None
+                    raw_pp = job_data.get('processing_progress')
+                    if raw_pp:
+                        import json as _json
+                        parsed = _json.loads(raw_pp) if isinstance(raw_pp, str) else raw_pp
+                        eta_at = parsed.get('eta_at')
+                        projected_eta = parsed.get('projected_eta')
+                    if eta_at is None and projected_eta is None:
+                        projected_eta = job_data.get('estimated_duration_seconds')
+                    if proc_at and (eta_at is not None or projected_eta is not None):
+                        emit_proc_at = proc_at
+                        if eta_at is not None:
+                            emit_eta = str(eta_at)
+                        else:
+                            emit_eta = int(projected_eta) if isinstance(projected_eta, (int, str)) else projected_eta
+                    else:
+                        emit_status = 'QUEUED'
+                except Exception:
+                    emit_status = 'QUEUED'
+
             job_dict = {
                 'job_id': job_id,
                 'filename': job_data.get('input_filename', ''),
-                'status': status,
+                'status': emit_status,
                 'device_profile': job_data.get('device_profile', ''),
                 'file_size': int(job_data.get('file_size', 0)),
+                'created_at': _created,
             }
 
             # Mark dismissal flag for COMPLETE jobs
-            if status == 'COMPLETE':
+            if emit_status == 'COMPLETE':
                 job_dict['is_dismissed'] = True if dismissed_at else False
 
-            # Add status-specific fields
-            status = job_data.get('status')
+            # Add status-specific fields based on emitted status
+            status = emit_status
 
             if status == 'QUEUED':
                 # Worker download speed for simulating download progress
@@ -629,29 +808,26 @@ def get_active_jobs_for_session(session_key: str) -> List[Dict[str, Any]]:
                         'percentage': round((parts_count / s3_parts_total) * 100, 1)
                     }
 
-            if status == 'PROCESSING':
-                # Processing progress with ETA
-                processing_at = job_data.get('processing_at')
-                projected_eta = job_data.get('projected_eta')
-                if processing_at and projected_eta:
+            if emit_status == 'PROCESSING' and (emit_proc_at is not None and emit_eta is not None):
+                proc_iso = emit_proc_at.isoformat() if hasattr(emit_proc_at, 'isoformat') else str(emit_proc_at)
+                if proc_iso and ('Z' not in proc_iso and '+' not in proc_iso and '-' not in proc_iso.split('T')[-1]):
+                    proc_iso = proc_iso + 'Z'
+                job_dict['processing_at'] = proc_iso
+                if isinstance(emit_eta, str):
+                    eta_at_str = emit_eta
+                else:
                     try:
-                        # processing_at is already a datetime object (parsed by get_job())
-                        # Only parse if it's still a string
-                        if isinstance(processing_at, str):
-                            processing_at = datetime.fromisoformat(processing_at)
-
-                        elapsed_seconds = (datetime.utcnow() - processing_at).total_seconds()
-                        projected_eta_seconds = int(float(projected_eta))
-                        remaining_seconds = max(0, projected_eta_seconds - elapsed_seconds)
-
-                        job_dict['processing_progress'] = {
-                            'elapsed_seconds': int(elapsed_seconds),
-                            'remaining_seconds': int(remaining_seconds),
-                            'projected_eta': projected_eta_seconds,
-                            'progress_percent': min(100, int((elapsed_seconds / projected_eta_seconds) * 100))
-                        }
-                    except (ValueError, TypeError) as e:
-                        logger.warning(f"Failed to parse processing progress for job {job_id}: {e}")
+                        from datetime import datetime, timedelta
+                        base = proc_iso
+                        if base.endswith('Z'):
+                            base = base[:-1] + '+00:00'
+                        eta_at_str = (datetime.fromisoformat(base) + timedelta(seconds=int(emit_eta))).isoformat()
+                    except Exception:
+                        eta_at_str = None
+                if eta_at_str is not None and ('Z' not in eta_at_str and '+' not in eta_at_str and '-' not in eta_at_str.split('T')[-1]):
+                    eta_at_str = eta_at_str + 'Z'
+                if eta_at_str is not None:
+                    job_dict['eta_at'] = eta_at_str
 
             if status == 'COMPLETE':
                 # Output file info
@@ -716,3 +892,9 @@ def get_active_jobs_for_session(session_key: str) -> List[Dict[str, Any]]:
     except Exception as e:
         logger.error(f"[RedisJobStore] Failed to get active jobs for session: {e}")
         return []
+
+
+# Module-level helper for broadcaster compatibility
+def get_all_active_jobs() -> List[Dict[str, Any]]:
+    """Return all active jobs using Redis only (no DB)."""
+    return RedisJobStore.get_all_active_jobs()

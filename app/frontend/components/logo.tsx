@@ -25,7 +25,7 @@ export function Logo({ className, size = "md" }: LogoProps) {
 
   return (
     <div className={cn("flex items-center gap-1.5", className)}>
-      <h1 className={cn("font-bold tracking-tight", sizes[size])}>
+      <h1 className={cn("font-bold tracking-tight font-bungee uppercase", sizes[size])}>
         <span className="text-foreground">Manga & Comic</span> <span className="text-theme-medium">Converter</span>
       </h1>
     </div>

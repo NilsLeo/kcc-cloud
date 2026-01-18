@@ -44,13 +44,17 @@ RUN pip install --upgrade pip
 # Remove any stale Python bytecode (prevents issues with old .pyc files)
 RUN find /app -depth -name "__pycache__" -exec rm -rf {} + || true
 
-# Copy application code
-COPY app /app
+# Copy requirements files first (for better Docker layer caching)
+COPY app/requirements.txt /app/requirements.txt
+COPY app/kcc/requirements.txt /app/kcc/requirements.txt
 
 # Install Python dependencies
 ENV PIP_DEFAULT_TIMEOUT=1000
 RUN pip install --retries 5 --no-cache-dir -r /app/requirements.txt
 RUN pip install --retries 5 --no-cache-dir -r /app/kcc/requirements.txt
+
+# Now copy the rest of the application code
+COPY app /app
 
 # Note: kindlegen is a proprietary binary and must be volume-mounted at /app/kindlegen/
 # It's added to PATH below so it can be found by the application

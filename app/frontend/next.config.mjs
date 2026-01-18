@@ -1,5 +1,3 @@
-// FOSS version - no Sentry
-
 let userConfig = undefined
 try {
   userConfig = await import('./v0-user-next.config')
@@ -16,11 +14,12 @@ const nextConfig = {
     unoptimized: true,
   },
   output: 'standalone',
-  experimental: {
+  // Keep experimental features off in dev containers to avoid instability/timeouts
+  experimental: process.env.NODE_ENV === 'production' ? {
     webpackBuildWorker: true,
     parallelServerBuildTraces: true,
     parallelServerCompiles: true,
-  },
+  } : {},
   webpack: (config, { isServer }) => {
     if (isServer) {
       // Fix for "self is not defined" error in middleware

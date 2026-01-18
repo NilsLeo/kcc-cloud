@@ -5,7 +5,7 @@ import { fetchWithLicense } from "@/lib/utils"
 import { logError } from "@/lib/logger"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Download, FileText, Check, Loader2, X, Clock, ArrowRight, HardDrive } from "lucide-react"
+import { Download, FileText, Check, Loader2, Trash2, Clock, ArrowRight, HardDrive } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
@@ -17,9 +17,9 @@ export type ConvertedFileInfo = {
   downloadId: string
   timestamp: number
   device: string
-  size?: number // Output file size
-  inputFileSize?: number // Input file size
-  actualDuration?: number // Duration in seconds
+  size?: number
+  inputFileSize?: number
+  actualDuration?: number
 }
 
 interface ConvertedFilesProps {
@@ -28,15 +28,50 @@ interface ConvertedFilesProps {
   onRemoveFile?: (file: ConvertedFileInfo) => void
 }
 
+const MOCK_DATA: ConvertedFileInfo[] = [
+  {
+    id: "mock-1",
+    originalName: "chapter-05.cbz",
+    convertedName: "chapter-05.epub",
+    downloadId: "dl-mock-1",
+    timestamp: Date.now() - 3600000,
+    device: "Kindle",
+    size: 8450000,
+    inputFileSize: 12300000,
+    actualDuration: 45,
+  },
+  {
+    id: "mock-2",
+    originalName: "volume-03.cbr",
+    convertedName: "volume-03.mobi",
+    downloadId: "dl-mock-2",
+    timestamp: Date.now() - 7200000,
+    device: "Kobo",
+    size: 15600000,
+    inputFileSize: 23400000,
+    actualDuration: 78,
+  },
+  {
+    id: "mock-3",
+    originalName: "manga-collection.zip",
+    convertedName: "manga-collection.pdf",
+    downloadId: "dl-mock-3",
+    timestamp: Date.now() - 10800000,
+    device: "iPad",
+    size: 45200000,
+    inputFileSize: 52100000,
+    actualDuration: 132,
+  },
+]
+
 export function ConvertedFiles({ files, onClearAll, onRemoveFile }: ConvertedFilesProps) {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8060"
+  const apiUrl = "http://localhost:8060"
   const [downloadingFiles, setDownloadingFiles] = useState<Record<string, boolean>>({})
-  // Use a ref to store download links to prevent them from being garbage collected
   const downloadLinksRef = useRef<HTMLAnchorElement[]>([])
 
-  if (files.length === 0) return null
+  const displayFiles = files.length > 0 ? files : MOCK_DATA
+  const usingMockData = files.length === 0
 
-  // Helper function to remove file extension for display
   const removeExtension = (filename: string) => {
     return filename.replace(/\.[^/.]+$/, "")
   }
@@ -77,17 +112,25 @@ export function ConvertedFiles({ files, onClearAll, onRemoveFile }: ConvertedFil
   }
 
   const downloadFile = async (file: ConvertedFileInfo) => {
+    if (usingMockData) {
+      console.log("[v0] Using mock data, simulating download...")
+      setDownloadingFiles((prev) => ({ ...prev, [file.id]: true }))
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+      toast.success(`Mock download: ${file.convertedName}`)
+      setDownloadingFiles((prev) => ({ ...prev, [file.id]: false }))
+      return
+    }
+
     try {
       setDownloadingFiles((prev) => ({ ...prev, [file.id]: true }))
 
-      // Download file directly from backend
+      console.log("[v0] Attempting download from localhost:8060...")
       const response = await fetchWithLicense(`${apiUrl}/download/${file.downloadId}`)
       if (!response.ok) {
         const errText = await response.text()
         throw new Error(errText || "Failed to download file")
       }
 
-      // Get the file blob and create a download link
       const blob = await response.blob()
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement("a")
@@ -98,7 +141,6 @@ export function ConvertedFiles({ files, onClearAll, onRemoveFile }: ConvertedFil
       downloadLinksRef.current.push(link)
       link.click()
 
-      // Clean up
       setTimeout(() => {
         window.URL.revokeObjectURL(url)
         document.body.removeChild(link)
@@ -106,12 +148,14 @@ export function ConvertedFiles({ files, onClearAll, onRemoveFile }: ConvertedFil
 
       toast.success(`Downloading ${file.convertedName}`)
     } catch (error) {
+      console.log("[v0] Download failed, localhost:8060 not reachable", {
+        error: error instanceof Error ? error.message : String(error),
+      })
       logError("Download error", file.downloadId, { error: error.message, error, fileId: file.id })
       toast.error("Download failed", {
         description: error instanceof Error ? error.message : "Failed to download file",
       })
     } finally {
-      // Set downloading to false after a short delay
       setTimeout(() => {
         setDownloadingFiles((prev) => ({ ...prev, [file.id]: false }))
       }, 1000)
@@ -137,29 +181,33 @@ export function ConvertedFiles({ files, onClearAll, onRemoveFile }: ConvertedFil
             Clear All
           </Button>
         </div>
-        <CardDescription>Your successfully converted files ready for download</CardDescription>
+        <CardDescription>
+          Your successfully converted files ready for download
+          {usingMockData && (
+            <Badge variant="outline" className="ml-2 text-xs">
+              Demo Mode
+            </Badge>
+          )}
+        </CardDescription>
       </CardHeader>
 
       <CardContent>
         <div className="space-y-3">
           <AnimatePresence>
-            {files.map((file) => (
+            {displayFiles.map((file) => (
               <motion.div
                 key={file.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, height: 0 }}
-                className="group relative rounded-lg border bg-card hover:bg-accent/50 transition-all duration-200 overflow-hidden"
+                className="group relative rounded-lg border bg-card transition-all duration-200 overflow-hidden"
               >
                 <div className="flex items-start gap-4 p-4">
-                  {/* File icon */}
                   <div className="p-2.5 rounded-lg bg-primary/10 text-primary shrink-0">
                     <FileText className="h-5 w-5" />
                   </div>
 
-                  {/* File info */}
                   <div className="flex-1 min-w-0 space-y-2">
-                    {/* Filename */}
                     <div>
                       <p className="font-semibold text-base truncate">{file.convertedName}</p>
                       <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
@@ -171,9 +219,7 @@ export function ConvertedFiles({ files, onClearAll, onRemoveFile }: ConvertedFil
                       </div>
                     </div>
 
-                    {/* File size and duration info */}
                     <div className="flex flex-wrap items-center gap-3 text-sm">
-                      {/* File size conversion */}
                       {file.inputFileSize && file.size ? (
                         <div className="flex items-center gap-1.5 text-muted-foreground">
                           <HardDrive className="h-3.5 w-3.5" />
@@ -188,7 +234,6 @@ export function ConvertedFiles({ files, onClearAll, onRemoveFile }: ConvertedFil
                         </div>
                       ) : null}
 
-                      {/* Duration */}
                       {file.actualDuration && (
                         <>
                           <span className="text-muted-foreground">•</span>
@@ -200,13 +245,15 @@ export function ConvertedFiles({ files, onClearAll, onRemoveFile }: ConvertedFil
                       )}
                     </div>
                   </div>
+                </div>
 
-                  {/* Action buttons */}
-                  <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/30">
+                  <div className="text-xs text-muted-foreground">Ready for download</div>
+                  <div className="flex items-center gap-2">
                     <Button
                       onClick={() => downloadFile(file)}
                       disabled={downloadingFiles[file.id]}
-                      size="default"
+                      size="sm"
                       className="shadow-sm"
                       aria-label={`Download ${file.convertedName}`}
                     >
@@ -229,9 +276,9 @@ export function ConvertedFiles({ files, onClearAll, onRemoveFile }: ConvertedFil
                         size="icon"
                         onClick={() => onRemoveFile(file)}
                         aria-label={`Remove ${file.convertedName}`}
-                        className="text-muted-foreground hover:text-destructive"
+                        className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                       >
-                        <X className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     )}
                   </div>

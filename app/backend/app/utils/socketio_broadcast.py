@@ -3,8 +3,13 @@ Shared SocketIO broadcasting utility for both Flask and Celery workers.
 """
 import logging
 from flask_socketio import SocketIO
-from database.models import get_db_session, ConversionJob
 from datetime import datetime
+from database.models import get_db_session, ConversionJob
+try:
+    # Prefer Redis-backed queue data
+    from utils.redis_job_store import get_all_active_jobs
+except Exception:
+    get_all_active_jobs = None
 
 logger = logging.getLogger(__name__)
 
@@ -35,41 +40,28 @@ def broadcast_queue_update():
     Broadcast current queue status to all connected clients.
     Can be called from Flask app or Celery workers.
     """
-    db = get_db_session()
     try:
-        # Get recent jobs (last 100), excluding dismissed ones
-        jobs = db.query(ConversionJob).filter(
-            ConversionJob.dismissed_at.is_(None)
-        ).order_by(ConversionJob.created_at.desc()).limit(100).all()
+        # Prefer Redis-backed active jobs (global)
+        if get_all_active_jobs:
+            jobs_list = get_all_active_jobs()
+        else:
+            jobs_list = []
 
-        jobs_list = []
-        for job in jobs:
-            job_data = {
-                "job_id": job.id,
-                "status": job.status.value,
-                "filename": job.input_filename,
-                "output_filename": job.output_filename,
-                "device_profile": job.device_profile,
-                "file_size": job.input_file_size,
-                "output_file_size": job.output_file_size,
-                "completed_at": job.completed_at.isoformat() if job.completed_at else None,
-            }
-
-            # Add processing progress for PROCESSING jobs
-            if job.status.value == "PROCESSING" and job.processing_started_at and job.estimated_duration_seconds:
-                elapsed_seconds = int((datetime.utcnow() - job.processing_started_at).total_seconds())
-                estimated_total = job.estimated_duration_seconds
-                remaining_seconds = max(0, estimated_total - elapsed_seconds)
-                progress_percent = min(100, int((elapsed_seconds / estimated_total) * 100))
-
-                job_data["processing_progress"] = {
-                    "elapsed_seconds": elapsed_seconds,
-                    "remaining_seconds": remaining_seconds,
-                    "projected_eta": remaining_seconds,
-                    "progress_percent": progress_percent
-                }
-
-            jobs_list.append(job_data)
+        # Debug summary to verify PROCESSING gating
+        try:
+            proc_debug = []
+            for j in jobs_list:
+                if j.get('status') == 'PROCESSING':
+                    pp = j.get('processing_progress') or {}
+                    proc_debug.append({
+                        'job_id': j.get('job_id'),
+                        'has_eta': 'projected_eta' in pp and pp.get('projected_eta') is not None,
+                        'has_processing_at': 'processing_at' in j and j.get('processing_at') is not None,
+                    })
+            if proc_debug:
+                logger.info(f"[Broadcast] PROCESSING jobs debug: {proc_debug}")
+        except Exception:
+            pass
 
         queue_status = {
             "jobs": jobs_list,
@@ -81,9 +73,7 @@ def broadcast_queue_update():
         socketio = get_socketio_instance()
         socketio.emit('queue_update', queue_status)
 
-        logger.info(f"Broadcasted queue update: {len(jobs_list)} jobs")
+        logger.info(f"Broadcasted queue update: {len(jobs_list)} jobs (Redis)")
 
     except Exception as e:
         logger.error(f"Error broadcasting queue update: {e}")
-    finally:
-        db.close()

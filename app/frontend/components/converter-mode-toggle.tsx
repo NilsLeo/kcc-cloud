@@ -25,7 +25,7 @@ export function ConverterModeToggle() {
             <BookOpenText className="h-5 w-5 text-primary" />
           </motion.div>
           <Label htmlFor="converter-mode" className="cursor-pointer text-sm font-medium">
-            {isManga ? "ComicConverter" : "MangaConverter"}
+            {isManga ? "Comic" : "Manga"}
           </Label>
         </div>
 
