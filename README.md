@@ -3,9 +3,8 @@
 <!-- PROJECT LOGO -->
 <div align="center">
 
-<!-- TODO: Replace with actual logo -->
-<!-- <img src="docs/logo.svg" width="300" alt="KCC Cloud Logo"> -->
-<!-- <br/><br/> -->
+<img src="docs/images/logo.png" width="300" alt="Manga & Comic Converter Logo" />
+<br/><br/>
 
 # KCC Cloud
 
@@ -18,7 +17,7 @@
 [![GitHub Stars](https://img.shields.io/github/stars/nilsleo/kcc-cloud?style=for-the-badge&logo=github)](https://github.com/nilsleo/kcc-cloud/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/nilsleo/kcc-cloud?style=for-the-badge&logo=github)](https://github.com/nilsleo/kcc-cloud/network/members)
 [![Downloads](https://img.shields.io/github/downloads/nilsleo/kcc-cloud/total?style=for-the-badge&logo=github)](https://github.com/nilsleo/kcc-cloud/releases)
-[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+ 
 
  
 
@@ -92,32 +91,26 @@ Experience the full application in action! No installation required—just visit
 
 ### Desktop & Mobile Responsive Design
 
-> **[GIF PLACEHOLDER: Desktop workflow - Upload → Configure → Monitor → Download]**
->
-> *Shows full conversion flow on desktop: dragging files, selecting device profile, adjusting options, watching real-time progress, downloading converted file*
+![Desktop workflow — Upload → Configure → Monitor → Download](docs/images/demo-desktop.gif)
 
-> **[GIF PLACEHOLDER: Mobile workflow - Same flow shown on smartphone]**
->
-> *Demonstrates responsive design: mobile-optimized file picker, touch-friendly controls, real-time job monitoring on phone*
+![Mobile workflow — Upload → Configure → Monitor → Download](docs/images/demo-mobile.gif)
 
-> **[GIF PLACEHOLDER: Multi-device sync - Desktop upload, phone monitors, tablet downloads]**
->
-> *Showcases cross-device access: upload from desktop, monitor progress on phone, download from tablet*
+![Multi-device sync — Desktop upload, phone monitors, tablet downloads](docs/images/demo-multidevice.gif)
 
 ### Screenshots
 
 <details>
 <summary>Click to expand screenshots</summary>
 
-> **[SCREENSHOT PLACEHOLDER: Main conversion page - Desktop]**
+![Main conversion page — Desktop](docs/images/screenshot-main-desktop.png)
 
-> **[SCREENSHOT PLACEHOLDER: Advanced options panel]**
+![Advanced options panel](docs/images/screenshot-advanced-options.png)
 
-> **[SCREENSHOT PLACEHOLDER: Conversion queue with real-time progress]**
+![Conversion queue with real-time progress](docs/images/screenshot-queue.png)
 
-> **[SCREENSHOT PLACEHOLDER: Mobile view - Main page]**
+![Mobile view — Main page](docs/images/screenshot-main-mobile.png)
 
-> **[SCREENSHOT PLACEHOLDER: Downloads history page]**
+![Downloads history page](docs/images/screenshot-downloads.png)
 
 </details>
 
@@ -125,9 +118,9 @@ Experience the full application in action! No installation required—just visit
 
 ## 🏗️ Architecture
 
-> **[DIAGRAM PLACEHOLDER: System architecture diagram]**
->
-> *High-level overview showing: Browser → Next.js Frontend (Port 3000) → Flask Backend API (Port 8060) → Redis Message Broker → Celery Worker Pool → KCC Conversion Engine → SQLite Database + Local Storage*
+![System architecture diagram](docs/images/architecture-diagram.png)
+
+High-level overview showing: Browser → Next.js Frontend (Port 3000) → Flask Backend API (Port 8060) → Redis Message Broker → Celery Worker Pool → KCC Conversion Engine → SQLite Database + Local Storage
 
 **Microservices Architecture:**
 - **Frontend**: Next.js 16 with React 19, TypeScript, Tailwind CSS, Radix UI
@@ -147,7 +140,7 @@ Experience the full application in action! No installation required—just visit
   <img src="https://img.shields.io/badge/Celery-37814A?style=for-the-badge&logo=celery&logoColor=white" alt="Celery" />
   <img src="https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white" alt="Redis" />
   <img src="https://img.shields.io/badge/SQLite-003B57?style=for-the-badge&logo=sqlite&logoColor=white" alt="SQLite" />
-  <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" />
+  <img src="https://img.shields.io/badge/Docker_Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker Compose" />
   <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS" />
 </p>
 
