@@ -70,8 +70,8 @@ While KCC's desktop GUI is fantastic, this web-based alternative offers compelli
 | **Always Available** | Runs 24/7 as a service, queue jobs anytime without launching a desktop application |
 | **Responsive Design** | Optimized UI for mobile, tablet, and desktop—convert manga on your phone while commuting |
 | **Real-Time Monitoring** | Live progress updates via WebSocket, monitor conversions from multiple devices simultaneously |
-
 | **Job History** | Persistent database tracks all conversions, redownload files anytime |
+
 
 ---
 
@@ -146,34 +146,6 @@ High-level overview showing: Browser → Next.js Frontend (Port 3000) → Flask 
 
  
 
-## 🛠️ Tech Stack
-
-### Frontend
-- **Framework**: Next.js 16 (React 19, TypeScript 5+)
-- **Styling**: Tailwind CSS 3.4, Radix UI components
-- **State**: React Hooks, React Hook Form + Zod validation
-- **Real-time**: Socket.IO Client 4.7
-- **Animation**: Framer Motion 12
-- **Testing**: Vitest 1.0, React Testing Library 14
-- **Code Quality**: ESLint, Prettier, TypeScript strict mode
-
-### Backend
-- **Framework**: Flask 2.0, Gunicorn WSGI
-- **Task Queue**: Celery 5.3, Redis 7
-- **Database**: SQLAlchemy 1.4, SQLite 3
-- **Real-time**: Flask-SocketIO 5.3, Python-SocketIO 5.11
-- **Conversion**: KCC (custom module), ImageMagick, PyMuPDF 1.23
-- **Testing**: pytest 7.4, pytest-cov, pytest-mock
-- **Code Quality**: Black, Flake8, isort, mypy
-
-### DevOps
-- **Containerization**: Docker, Docker Compose
-- **CI/CD**: GitHub Actions (linting, testing, coverage)
-- **Code Quality**: Pre-commit hooks, Codecov integration
-- **Monitoring**: Flower (Celery), structured logging
- 
-
----
 
 ## 🚀 Quick Start
 
@@ -234,21 +206,6 @@ Then apply the change:
 ```bash
 docker compose up -d
 ```
-
-### Development Setup
-
-For hot-reload development:
-
-```bash
-# Install dependencies locally (optional, for IDE support)
-cd app/backend && pip install -r requirements.txt -r requirements-dev.txt
-cd app/frontend && pnpm install
-
-# Start development environment
-docker compose -f docker-compose.dev.yml up
-```
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed development instructions.
 
 ---
 
@@ -320,7 +277,6 @@ Key configuration options in `.env`:
 | `NEXT_PUBLIC_MAX_FILE_SIZE` | 1GB | Max single file size |
 | `ALLOWED_ORIGINS` | localhost:3000 | CORS allowed origins |
 
-See [.env.example](.env.example) for all 40+ configuration options.
 
 ### Performance Tuning
 
@@ -341,16 +297,6 @@ CELERY_CONCURRENCY=1          # Single job per worker
 ```
 
 ---
-
- 
-
- 
-
- 
-
-## 💻 Development
-
-Refer to [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, local environment, testing, and code style. That document is the single source of truth.
 
 ## 🤝 Contributing
 
@@ -376,7 +322,6 @@ Special thanks to:
 - The open-source community for all the amazing libraries and tools
 
 ---
-
 <!-- STAR HISTORY - Uncomment when you have some stars! -->
 <!--
 ## ⭐ Star History
@@ -385,8 +330,6 @@ Special thanks to:
 
 ---
 -->
-
- 
 
 <div align="center">
 
