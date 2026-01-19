@@ -6,7 +6,7 @@
 <img src="docs/images/logo.png" width="300" alt="Manga & Comic Converter Logo" />
 <br/><br/>
 
-**A self-hosted, privacy-focused web application for converting manga and comics to e-reader optimized formats**
+**A self-hosted web application for converting manga and comics to e-reader optimized formats**
 
 <br/>
 
@@ -70,7 +70,7 @@ While KCC's desktop GUI is fantastic, this web-based alternative offers compelli
 | **Always Available** | Runs 24/7 as a service, queue jobs anytime without launching a desktop application |
 | **Responsive Design** | Optimized UI for mobile, tablet, and desktop—convert manga on your phone while commuting |
 | **Real-Time Monitoring** | Live progress updates via WebSocket, monitor conversions from multiple devices simultaneously |
-| **Privacy-First** | Self-hosted solution—all data stays on your server, no cloud dependencies |
+
 | **Job History** | Persistent database tracks all conversions, redownload files anytime |
 
 ---
@@ -183,39 +183,56 @@ High-level overview showing: Browser → Next.js Frontend (Port 3000) → Flask 
 - 2GB+ RAM available
 - 10GB+ disk space for conversions
 
-### Installation
+### Installation (Docker Compose)
 
-1. **Clone the repository**
+1. Create a new folder for your deployment (anywhere on your machine):
    ```bash
-   git clone https://github.com/nilsleo/kcc-cloud.git
-   cd kcc-cloud
+   mkdir mangaconverter && cd mangaconverter
    ```
 
-2. **Configure environment**
-   ```bash
-   cp .env.example .env
-   # Edit .env if needed (optional for local testing)
+2. Create a `docker-compose.yml` with the following content:
+   ```yaml
+   services:
+     app:
+       image: nilsleo/kcc-cloud:latest
+       container_name: mangaconverter-foss-app
+       restart: unless-stopped
+       ports:
+         - "8080:80"
+       environment:
+         - USER_ID=1000           # set to your user id (run: id -u)
+         - GROUP_ID=1000          # set to your group id (run: id -g)
+         - TZ=Europe/Berlin       # set your timezone
+         - NEXT_PUBLIC_MAX_FILES=10
+         - CELERY_WORKERS=2       # parallel conversions; increase for more throughput
+       volumes:
+         - ./volumes/data:/data
+         # Optional: mount KindleGen if you have it (read-only)
+         # Download from https://archive.org/details/kindlegen and place in ./volumes/kindlegen
+         - ./volumes/kindlegen:/opt/backend/kindlegen:ro
    ```
 
-3. **Start the application**
+3. Start the app:
    ```bash
    docker compose up -d
    ```
 
-4. **Access the web interface**
-   - Frontend: http://localhost:3000
-   - Backend API: http://localhost:8060
+4. Access the web interface:
+   - App: http://localhost:8080
 
 ### Scaling Workers
 
-To increase conversion throughput, scale the worker pool:
+Increase `CELERY_WORKERS` in your `docker-compose.yml` and redeploy:
+
+```yaml
+environment:
+  - CELERY_WORKERS=5   # e.g., 5 parallel workers
+```
+
+Then apply the change:
 
 ```bash
-# Scale to 5 worker containers (10 parallel jobs with default concurrency=2)
-docker compose up -d --scale celery-worker=5
-
-# Adjust concurrency in .env
-CELERY_CONCURRENCY=4  # 5 workers × 4 = 20 parallel jobs
+docker compose up -d
 ```
 
 ### Development Setup
@@ -288,17 +305,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed development instructions.
 
 </details>
 
-### Mobile Usage
-
-KCC Cloud is fully optimized for mobile:
-
-1. Visit the URL on your smartphone/tablet
-2. Use native file picker or photo library
-3. Touch-optimized controls for all options
-4. Monitor conversions on-the-go
-5. Download directly to device
-
----
+ 
 
 ## ⚙️ Configuration
 
@@ -309,7 +316,6 @@ Key configuration options in `.env`:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `CELERY_CONCURRENCY` | 2 | Jobs per worker container |
-| `GUNICORN_WORKERS` | 4 | API server processes |
 | `NEXT_PUBLIC_MAX_FILES` | 10 | Max simultaneous uploads |
 | `NEXT_PUBLIC_MAX_FILE_SIZE` | 1GB | Max single file size |
 | `ALLOWED_ORIGINS` | localhost:3000 | CORS allowed origins |
@@ -322,7 +328,6 @@ See [.env.example](.env.example) for all 40+ configuration options.
 ```bash
 # .env adjustments
 CELERY_CONCURRENCY=4          # More jobs per worker
-GUNICORN_WORKERS=8            # More API workers
 GUNICORN_TIMEOUT=1200         # Longer timeout for large files
 
 # Scale workers
@@ -333,7 +338,6 @@ docker compose up -d --scale celery-worker=10
 ```bash
 # .env adjustments
 CELERY_CONCURRENCY=1          # Single job per worker
-GUNICORN_WORKERS=2            # Fewer API workers
 ```
 
 ---
@@ -346,80 +350,7 @@ GUNICORN_WORKERS=2            # Fewer API workers
 
 ## 💻 Development
 
-### Project Structure
-
-```
-kcc-cloud/
-├── app/
-│   ├── backend/           # Flask API + Celery workers
-│   │   ├── app/
-│   │   │   ├── app.py     # Flask application
-│   │   │   ├── tasks.py   # Celery tasks
-│   │   │   ├── routes.py  # API endpoints
-│   │   │   ├── models.py  # SQLAlchemy models
-│   │   │   └── utils/     # Helper modules
-│   │   ├── tests/         # Backend tests
-│   │   └── requirements.txt
-│   └── frontend/          # Next.js application
-│       ├── app/           # Next.js 13+ app directory
-│       ├── components/    # React components
-│       ├── lib/           # Utilities
-│       ├── hooks/         # Custom hooks
-│       ├── __tests__/     # Frontend tests
-│       └── package.json
-├── docker-compose.yml     # Production config
-├── docker-compose.dev.yml # Development config
-├── .github/workflows/     # CI/CD pipelines
-└── README.md
-```
-
-### Running Tests
-
-**Backend**:
-```bash
-cd app/backend
-pytest --cov=app --cov-report=html
-```
-
-**Frontend**:
-```bash
-cd app/frontend
-pnpm test
-pnpm test:coverage
-```
-
-### Code Quality
-
-**Backend**:
-```bash
-cd app/backend
-black .                    # Format code
-isort .                    # Sort imports
-flake8 .                   # Lint
-mypy .                     # Type check
-```
-
-**Frontend**:
-```bash
-cd app/frontend
-pnpm format                # Format code
-pnpm lint                  # Lint
-pnpm type-check            # Type check
-```
-
-### Pre-commit Hooks
-
-```bash
-pip install pre-commit
-pre-commit install
-pre-commit run --all-files  # Manual run
-```
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
-
----
-
- 
+Refer to [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, local environment, testing, and code style. That document is the single source of truth.
 
 ## 🤝 Contributing
 
