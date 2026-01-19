@@ -6,8 +6,6 @@
 <img src="docs/images/logo.png" width="300" alt="Manga & Comic Converter Logo" />
 <br/><br/>
 
-# KCC Cloud
-
 **A self-hosted, privacy-focused web application for converting manga and comics to e-reader optimized formats**
 
 <br/>
