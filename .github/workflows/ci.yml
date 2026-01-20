@@ -31,7 +31,7 @@ jobs:
       - name: Run tests
         run: cd app/backend && pytest --cov=app --cov-report=xml
         env:
-          DATABASE_URL: sqlite:///:memory:
+          DATABASE_URL: "sqlite:///:memory:"
 
       # TODO: Re-enable after setting up Codecov
       # - name: Upload coverage
