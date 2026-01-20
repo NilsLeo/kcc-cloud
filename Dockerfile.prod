@@ -79,9 +79,9 @@ COPY app/backend/app /opt/backend
 
 # Python deps
 ENV PIP_DEFAULT_TIMEOUT=1000
-RUN pip3 install --upgrade pip && \
-    pip3 install --no-cache-dir -r /opt/backend/requirements.txt && \
-    pip3 install --no-cache-dir -r /opt/backend/kcc/requirements.txt
+RUN pip3 install --break-system-packages --upgrade pip && \
+    pip3 install --break-system-packages --no-cache-dir -r /opt/backend/requirements.txt && \
+    pip3 install --break-system-packages --no-cache-dir -r /opt/backend/kcc/requirements.txt
 
 # Copy frontend build output (Next.js standalone)
 WORKDIR /opt/frontend
