@@ -51,9 +51,26 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user and data dir
-RUN groupadd -g ${GROUP_ID} appuser 2>/dev/null || groupmod -n appuser $(getent group ${GROUP_ID} | cut -d: -f1) && \
-    useradd -u ${USER_ID} -g appuser -s /bin/bash -m appuser || \
-    usermod -u ${USER_ID} -g appuser -s /bin/bash -d /home/appuser appuser
+RUN set -ex; \
+    # Handle group - create or rename existing
+    if ! getent group ${GROUP_ID} >/dev/null 2>&1; then \
+        groupadd -g ${GROUP_ID} appuser; \
+    else \
+        EXISTING_GROUP=$(getent group ${GROUP_ID} | cut -d: -f1); \
+        if [ "$EXISTING_GROUP" != "appuser" ]; then \
+            groupmod -n appuser "$EXISTING_GROUP"; \
+        fi; \
+    fi; \
+    # Handle user - create or rename existing
+    if ! getent passwd ${USER_ID} >/dev/null 2>&1; then \
+        useradd -u ${USER_ID} -g appuser -s /bin/bash -m appuser; \
+    else \
+        EXISTING_USER=$(getent passwd ${USER_ID} | cut -d: -f1); \
+        if [ "$EXISTING_USER" != "appuser" ]; then \
+            usermod -l appuser -d /home/appuser -m "$EXISTING_USER"; \
+            usermod -g appuser appuser; \
+        fi; \
+    fi
 
 RUN mkdir -p /data && chown appuser:appuser /data
 
