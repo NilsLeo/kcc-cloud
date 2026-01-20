@@ -92,6 +92,8 @@ While KCC's desktop GUI is fantastic, this web-based alternative offers compelli
 
 ### Advanced Options
 
+Fine-tune your conversions with 25+ parameters including image processing, cropping, borders, manga-specific settings, and output quality controls.
+
 ![Advanced options panel](docs/images/screenshot-advanced-options.gif)
 
 <details>
@@ -136,6 +138,8 @@ While KCC's desktop GUI is fantastic, this web-based alternative offers compelli
 
 ### Downloads Page
 
+Access all your completed conversions with download links, file details, and the ability to delete conversions you no longer need.
+
 ![Downloads history page](docs/images/screenshot-downloads.gif)
  
 ---
@@ -143,8 +147,6 @@ While KCC's desktop GUI is fantastic, this web-based alternative offers compelli
 ## 🏗️ Architecture
 
 ![System architecture diagram](docs/images/system-architecture.svg)
-
-High-level overview showing: Browser → Next.js Frontend (Port 3000) → Flask Backend API (Port 8060) → Redis Message Broker → Celery Worker Pool → KCC Conversion Engine → SQLite Database + Local Storage
 
 **Microservices Architecture:**
 - **Frontend**: Next.js 16 with React 19, TypeScript, Tailwind CSS, Radix UI
@@ -276,8 +278,6 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for:
 - Code style guidelines
 - Testing requirements
 - Pull request process
-
-Roadmap and ongoing development plans are tracked in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
