@@ -1,0 +1,226 @@
+{
+  "myDownloads": [
+    {
+      "job_id": "mock-1-dl",
+      "original_filename": "naruto-shippuden-ch700.cbz",
+      "converted_filename": "naruto-shippuden-ch700.epub",
+      "device_profile": "Kindle Paperwhite",
+      "input_file_size": 25600000,
+      "output_file_size": 18900000,
+      "status": "COMPLETE",
+      "progress": 100,
+      "completed_at": "2024-01-14T10:30:00Z",
+      "actual_duration": 87
+    },
+    {
+      "job_id": "mock-2-dl",
+      "original_filename": "tokyo-ghoul-vol-14.pdf",
+      "converted_filename": "tokyo-ghoul-vol-14.mobi",
+      "device_profile": "Kobo Libra",
+      "input_file_size": 42100000,
+      "output_file_size": 35700000,
+      "status": "COMPLETE",
+      "progress": 100,
+      "completed_at": "2024-01-14T09:15:00Z",
+      "actual_duration": 125
+    },
+    {
+      "job_id": "mock-3-dl",
+      "original_filename": "one-piece-ch1050.cbz",
+      "converted_filename": "one-piece-ch1050.epub",
+      "device_profile": "Kindle Oasis",
+      "input_file_size": 38200000,
+      "output_file_size": 29100000,
+      "status": "COMPLETE",
+      "progress": 100,
+      "completed_at": "2024-01-14T08:45:00Z",
+      "actual_duration": 95
+    },
+    {
+      "job_id": "mock-4-dl",
+      "original_filename": "attack-on-titan-final.pdf",
+      "converted_filename": "attack-on-titan-final.mobi",
+      "device_profile": "Kobo Clara",
+      "input_file_size": 55600000,
+      "output_file_size": 48300000,
+      "status": "COMPLETE",
+      "progress": 100,
+      "completed_at": "2024-01-14T07:20:00Z",
+      "actual_duration": 145
+    },
+    {
+      "job_id": "mock-5-dl",
+      "original_filename": "demon-slayer-ch205.cbz",
+      "converted_filename": "demon-slayer-ch205.epub",
+      "device_profile": "Kindle Paperwhite",
+      "input_file_size": 28900000,
+      "output_file_size": 22400000,
+      "status": "COMPLETE",
+      "progress": 100,
+      "completed_at": "2024-01-13T23:50:00Z",
+      "actual_duration": 78
+    },
+    {
+      "job_id": "mock-6-dl",
+      "original_filename": "corrupted-file.cbz",
+      "converted_filename": "corrupted-file.epub",
+      "device_profile": "Kindle Oasis",
+      "input_file_size": 32100000,
+      "output_file_size": 0,
+      "status": "ERROR",
+      "progress": 65,
+      "completed_at": "2024-01-13T22:45:00Z",
+      "actual_duration": 0,
+      "error": "File extraction failed: Invalid archive format"
+    },
+    {
+      "job_id": "mock-7-dl",
+      "original_filename": "my-hero-academia-vol-35.pdf",
+      "converted_filename": "my-hero-academia-vol-35.mobi",
+      "device_profile": "Kobo Libra",
+      "input_file_size": 45300000,
+      "output_file_size": 38900000,
+      "status": "COMPLETE",
+      "progress": 100,
+      "completed_at": "2024-01-13T22:15:00Z",
+      "actual_duration": 110
+    },
+    {
+      "job_id": "mock-8-dl",
+      "original_filename": "jujutsu-kaisen-ch235.cbz",
+      "converted_filename": "jujutsu-kaisen-ch235.epub",
+      "device_profile": "Kindle Oasis",
+      "input_file_size": 32700000,
+      "output_file_size": 25800000,
+      "status": "COMPLETE",
+      "progress": 100,
+      "completed_at": "2024-01-13T21:40:00Z",
+      "actual_duration": 82
+    },
+    {
+      "job_id": "mock-9-dl",
+      "original_filename": "chainsaw-man-vol-13.pdf",
+      "converted_filename": "chainsaw-man-vol-13.mobi",
+      "device_profile": "Kobo Clara",
+      "input_file_size": 39800000,
+      "output_file_size": 33200000,
+      "status": "COMPLETE",
+      "progress": 100,
+      "completed_at": "2024-01-13T20:05:00Z",
+      "actual_duration": 98
+    },
+    {
+      "job_id": "mock-10-dl",
+      "original_filename": "spy-x-family-ch88.cbz",
+      "converted_filename": "spy-x-family-ch88.epub",
+      "device_profile": "Kindle Paperwhite",
+      "input_file_size": 27400000,
+      "output_file_size": 21100000,
+      "status": "COMPLETE",
+      "progress": 100,
+      "completed_at": "2024-01-13T19:30:00Z",
+      "actual_duration": 73
+    },
+    {
+      "job_id": "mock-11-dl",
+      "original_filename": "vinland-saga-vol-27.pdf",
+      "converted_filename": "vinland-saga-vol-27.mobi",
+      "device_profile": "Kobo Libra",
+      "input_file_size": 51200000,
+      "output_file_size": 44600000,
+      "status": "COMPLETE",
+      "progress": 100,
+      "completed_at": "2024-01-13T18:00:00Z",
+      "actual_duration": 132
+    },
+    {
+      "job_id": "mock-12-dl",
+      "original_filename": "blue-lock-ch242.cbz",
+      "converted_filename": "blue-lock-ch242.epub",
+      "device_profile": "Kindle Oasis",
+      "input_file_size": 35600000,
+      "output_file_size": 28300000,
+      "status": "COMPLETE",
+      "progress": 100,
+      "completed_at": "2024-01-13T16:45:00Z",
+      "actual_duration": 89
+    },
+    {
+      "job_id": "mock-13-dl",
+      "original_filename": "berserk-deluxe-vol-14.pdf",
+      "converted_filename": "berserk-deluxe-vol-14.mobi",
+      "device_profile": "Kobo Clara",
+      "input_file_size": 68900000,
+      "output_file_size": 59700000,
+      "status": "COMPLETE",
+      "progress": 100,
+      "completed_at": "2024-01-13T15:20:00Z",
+      "actual_duration": 178
+    }
+  ],
+  "convertedFiles": [
+    {
+      "id": "mock-cf-1",
+      "originalName": "bleach-chapter-686.cbz",
+      "convertedName": "bleach-chapter-686.epub",
+      "downloadId": "dl-cf-1",
+      "timestamp": 1705226400000,
+      "device": "Kindle Oasis",
+      "size": 12300000,
+      "inputFileSize": 18500000,
+      "actualDuration": 62,
+      "status": "COMPLETE",
+      "progress": 100
+    }
+  ],
+  "conversionQueue": [
+    {
+      "id": "mock-q-uploading",
+      "jobId": "job-upload-1",
+      "name": "hunter-x-hunter-ch390.cbz",
+      "size": 45678901,
+      "type": "application/x-cbz",
+      "status": "UPLOADING",
+      "progress": 45,
+      "upload_progress": {
+        "percentage": 45,
+        "uploaded_bytes": 20555555,
+        "total_bytes": 45678901
+      }
+    },
+    {
+      "id": "mock-q-processing",
+      "jobId": "job-processing-1",
+      "name": "fullmetal-alchemist-vol-27.pdf",
+      "size": 87654321,
+      "type": "application/pdf",
+      "status": "PROCESSING",
+      "progress": 67,
+      "processing_progress": {
+        "progress_percent": 67,
+        "elapsed_seconds": 45,
+        "remaining_seconds": 22,
+        "projected_eta": 67
+      }
+    },
+    {
+      "id": "mock-q-complete",
+      "jobId": "job-complete-1",
+      "name": "death-note-complete.epub",
+      "size": 12345678,
+      "type": "application/epub+zip",
+      "status": "COMPLETE",
+      "progress": 100
+    },
+    {
+      "id": "mock-q-error",
+      "jobId": "job-error-1",
+      "name": "corrupted-archive.zip",
+      "size": 5432109,
+      "type": "application/zip",
+      "status": "ERROR",
+      "progress": 0,
+      "error": "Failed to extract archive: corrupted header"
+    }
+  ]
+}
