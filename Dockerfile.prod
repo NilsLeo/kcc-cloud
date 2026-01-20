@@ -104,7 +104,8 @@ ENV TZ=UTC \
     STORAGE_PATH=/data \
     DATABASE_URL=sqlite:////data/jobs.db \
     CELERY_BROKER_URL=redis://127.0.0.1:6379/0 \
-    NEXT_PUBLIC_MAX_FILES=10
+    NEXT_PUBLIC_MAX_FILES=10 \
+    CELERY_WORKERS=3
 
 # Add kindlegen directory to PATH if mounted
 ENV PATH=$PATH:/usr/local/bin:/opt/backend/kindlegen
