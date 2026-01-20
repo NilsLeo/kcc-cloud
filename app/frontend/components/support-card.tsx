@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 export function SupportCard() {
   const handleSupportClick = () => {
-    window.open("https://github.com/yourusername/manga-converter/issues/new", "_blank", "noopener,noreferrer")
+    window.open("https://github.com/NilsLeo/kcc-cloud/issues/new", "_blank", "noopener,noreferrer")
   }
 
   return (

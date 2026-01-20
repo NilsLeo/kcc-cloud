@@ -9,7 +9,7 @@ services:
       dockerfile: Dockerfile.dev
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8060}
-    container_name: mangaconverter-foss-frontend-dev
+    container_name: kcc-cloud-frontend-dev
     restart: unless-stopped
     user: "0:0"
     ports:
@@ -33,8 +33,6 @@ services:
           path: app/frontend/package.json
         - action: rebuild
           path: app/frontend/pnpm-lock.yaml
-    profiles:
-      - dev
 
   backend:
     build:
@@ -42,7 +40,7 @@ services:
       args:
         USER_ID: ${PUID:-1000}
         GROUP_ID: ${PGID:-1000}
-    container_name: mangaconverter-foss-backend
+    container_name: kcc-cloud-backend
     restart: unless-stopped
     ports:
       - "8060:8060"
@@ -76,8 +74,6 @@ services:
           path: app/backend/requirements.txt
         - action: rebuild
           path: app/backend/app/kcc/requirements.txt
-    profiles:
-      - dev
 
   celery-worker:
     build:
@@ -130,12 +126,10 @@ services:
         reservations:
           cpus: '1.5'
           memory: 2500M
-    profiles:
-      - dev
 
   redis:
     image: redis:7-alpine
-    container_name: mangaconverter-foss-redis
+    container_name: kcc-cloud-redis
     restart: unless-stopped
     ports:
       - "6379:6379"
@@ -146,8 +140,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    profiles:
-      - dev
 
   # ============================================
   # PRODUCTION SERVICE (single-container)
@@ -162,18 +154,19 @@ services:
         GROUP_ID: ${PGID:-1000}
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL_PROD:-http://localhost:8080}
         NEXT_PUBLIC_MAX_FILES: ${NEXT_PUBLIC_MAX_FILES:-10}
-    container_name: mangaconverter-foss-prod
+    container_name: kcc-cloud-prod
     restart: unless-stopped
     ports:
       - "8080:80"
     environment:
       - TZ=${TZ:-UTC}
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
       - NEXT_PUBLIC_MAX_FILES=${NEXT_PUBLIC_MAX_FILES:-10}
+      - CELERY_WORKERS=${CELERY_WORKERS:-3}
     volumes:
       - ./volumes/data:/data
       - ./volumes/kindlegen:/opt/backend/kindlegen:ro
-    profiles:
-      - prod
 
 volumes:
   conversion-data:
