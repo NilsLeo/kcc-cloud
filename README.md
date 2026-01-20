@@ -220,6 +220,14 @@ Access all your completed conversions with download links, file details, and the
 4. Access the web interface:
    - App: http://localhost:8080
 
+### Adding KindleGen (Required for Kindle Conversions)
+
+1. **Download KindleGen**: Amazon's conversion tool for MOBI/AZW3 formats. Get the Linux version from [archive.org/details/kindlegen](https://archive.org/details/kindlegen)
+
+2. **Place the binary**: Extract and place the `kindlegen` binary in `./volumes/kindlegen/` folder (create if needed)
+
+3. **Restart**: The volume mount in docker-compose.yml will make it available. Run `docker compose restart` if already running
+
 ### Scaling Workers
 
 Increase `CELERY_WORKERS` in your `docker-compose.yml` and redeploy:
