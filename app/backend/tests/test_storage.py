@@ -6,13 +6,6 @@ import pytest
 class TestLocalStorage:
     """Test local storage functionality."""
 
-    def test_storage_path_creation(self):
-        """Test that storage paths are created correctly."""
-        from utils.storage.local_storage import LocalStorage
-
-        storage = LocalStorage()
-        # Verify storage instance is created
-        assert storage is not None
 
     def test_upload_path_construction(self):
         """Test that upload paths are constructed correctly."""

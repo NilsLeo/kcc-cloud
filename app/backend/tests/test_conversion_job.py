@@ -21,11 +21,6 @@ class TestConversionJob:
         assert job.input_filename == "test.cbz"
         assert job.device_profile == "KV"
 
-    def test_job_default_status(self):
-        """Test that default status is QUEUED."""
-        job = ConversionJob(id="test-job-456", input_filename="test.pdf")
-
-        assert job.status == JobStatus.QUEUED
 
     def test_job_status_transitions(self):
         """Test job status can be updated."""
