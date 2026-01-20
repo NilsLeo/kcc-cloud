@@ -19,7 +19,7 @@
 
  
 
-[🌐 Live Demo](https://www.mangaconverter.com) • [Quick Start](#quick-start) • [Tech Stack](#tech-stack) • [Documentation](#documentation)
+[🌐 Live Demo](https://www.mangaconverter.com) • [Quick Start](#-quick-start) • [Architecture](#-architecture) • [Contributing](#-contributing)
 
 </div>
 
@@ -29,19 +29,15 @@
 <details>
   <summary>📑 Table of Contents</summary>
   <ol>
-    <li><a href="#overview">Overview</a></li>
-    <li><a href="#demo">Demo</a></li>
-    <li><a href="#architecture">Architecture</a></li>
-    <li><a href="#tech-stack">Tech Stack</a></li>
-    <li><a href="#quick-start">Quick Start</a></li>
-    <li><a href="#usage">Usage</a></li>
-    <li><a href="#configuration">Configuration</a></li>
-    
-    <li><a href="#development">Development</a></li>
-    
-    <li><a href="#contributing">Contributing</a></li>
-    <li><a href="#license">License</a></li>
-    <li><a href="#acknowledgments">Acknowledgments</a></li>
+    <li><a href="#-overview">Overview</a></li>
+    <li><a href="#-usage">Usage</a></li>
+    <li><a href="#-architecture">Architecture</a></li>
+    <li><a href="#-quick-start">Quick Start</a></li>
+    <li><a href="#-configuration">Configuration</a></li>
+    <li><a href="#-contributing">Contributing</a></li>
+    <li><a href="#-license">License</a></li>
+    <li><a href="#-acknowledgments">Acknowledgments</a></li>
+    <li><a href="#-star-history">Star History</a></li>
   </ol>
 </details>
 
@@ -52,6 +48,9 @@
 KCC Cloud transforms your manga, comics, and documents into e-reader optimized formats (EPUB, MOBI, PDF, KFX, CBZ) with a modern, responsive web interface. Built for self-hosting with Docker, it provides multi-device access, real-time job monitoring, and parallel processing capabilities.
 
 > **🚀 Try it now:** [www.mangaconverter.com](https://www.mangaconverter.com) — No installation required!
+
+> **💡 Tip:** Works great on mobile too! Try uploading a file from your smartphone to see the responsive design in action.
+![Responsive Design](docs/images/screenshot-main-mobile.png)
 
 ### Built on KCC
 
@@ -74,44 +73,67 @@ While KCC's desktop GUI is fantastic, this web-based alternative offers compelli
 
 
 ---
+## 📱 Usage
 
-## 🎬 Demo
+### Basic Conversion
 
-### 🌐 Live Demo
+1. **Upload Files**: Drag-and-drop or click to browse
+2. **Select Device**: Choose from 35+ e-reader profiles (e.g., Kindle Paperwhite, Kobo Clara)
+3. **Configure Options** (optional): Expand "Advanced Options" for fine-tuning
+4. **Convert**: Click "Convert" button
+5. **Monitor**: Watch real-time progress with ETA
+6. **Download**: Click download button when complete
 
-**Try it now:** **[www.mangaconverter.com](https://www.mangaconverter.com)**
+![Main conversion page — Desktop](docs/images/screenshot-main-desktop.gif)
 
-Experience the full application in action! No installation required—just visit the URL and start converting manga and comics to e-reader formats.
+### Advanced Options
 
-> **💡 Tip:** Works great on mobile too! Try uploading a file from your smartphone to see the responsive design in action.
-
----
-
-### Desktop & Mobile Responsive Design
-
-![Desktop workflow — Upload → Configure → Monitor → Download](docs/images/demo-desktop.gif)
-
-![Mobile workflow — Upload → Configure → Monitor → Download](docs/images/demo-mobile.gif)
-
-![Multi-device sync — Desktop upload, phone monitors, tablet downloads](docs/images/demo-multidevice.gif)
-
-### Screenshots
+![Advanced options panel](docs/images/screenshot-advanced-options.gif)
 
 <details>
-<summary>Click to expand screenshots</summary>
+<summary>View all 25+ conversion parameters</summary>
 
-![Main conversion page — Desktop](docs/images/screenshot-main-desktop.png)
+**Image Processing**
+- Upscale images for higher quality
+- Stretch to fill screen (no borders)
+- High quality mode (slower, better output)
+- Auto-level for contrast adjustment
+- Force grayscale or color
 
-![Advanced options panel](docs/images/screenshot-advanced-options.png)
+**Cropping & Margins**
+- Margin detection (4 levels: none to aggressive)
+- Page number removal
+- Preserve original margins
+- Cropping power adjustment
 
-![Conversion queue with real-time progress](docs/images/screenshot-queue.png)
+**Borders**
+- Black/white border detection
+- Force black or white borders
+- Border size control
 
-![Mobile view — Main page](docs/images/screenshot-main-mobile.png)
+**Output Quality**
+- Gamma correction (0.1-2.0)
+- Target file size limits
+- mozJPEG compression
+- Force PNG format
 
-![Downloads history page](docs/images/screenshot-downloads.png)
+**Manga-Specific**
+- Right-to-left reading mode
+- Two-panel detection
+- Webtoon mode (vertical scroll)
+- Spread shift for two-page layouts
+
+**Orientation**
+- Rotation (0°, 90°, 180°, 270°)
+- Auto-rotation
+- Landscape split mode
 
 </details>
 
+### Downloads Page
+
+![Downloads history page](docs/images/screenshot-downloads.gif)
+ 
 ---
 
 ## 🏗️ Architecture
@@ -208,61 +230,6 @@ docker compose up -d
 ```
 
 ---
-
-## 📱 Usage
-
-### Basic Conversion
-
-1. **Upload Files**: Drag-and-drop or click to browse
-2. **Select Device**: Choose from 35+ e-reader profiles (e.g., Kindle Paperwhite, Kobo Clara)
-3. **Configure Options** (optional): Expand "Advanced Options" for fine-tuning
-4. **Convert**: Click "Convert" button
-5. **Monitor**: Watch real-time progress with ETA
-6. **Download**: Click download button when complete
-
-### Advanced Options
-
-<details>
-<summary>View all 25+ conversion parameters</summary>
-
-**Image Processing**
-- Upscale images for higher quality
-- Stretch to fill screen (no borders)
-- High quality mode (slower, better output)
-- Auto-level for contrast adjustment
-- Force grayscale or color
-
-**Cropping & Margins**
-- Margin detection (4 levels: none to aggressive)
-- Page number removal
-- Preserve original margins
-- Cropping power adjustment
-
-**Borders**
-- Black/white border detection
-- Force black or white borders
-- Border size control
-
-**Output Quality**
-- Gamma correction (0.1-2.0)
-- Target file size limits
-- mozJPEG compression
-- Force PNG format
-
-**Manga-Specific**
-- Right-to-left reading mode
-- Two-panel detection
-- Webtoon mode (vertical scroll)
-- Spread shift for two-page layouts
-
-**Orientation**
-- Rotation (0°, 90°, 180°, 270°)
-- Auto-rotation
-- Landscape split mode
-
-</details>
-
- 
 
 ## ⚙️ Configuration
 
