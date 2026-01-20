@@ -28,10 +28,10 @@ jobs:
       - name: Run Flake8
         run: cd app/backend && flake8 . --exclude=app/kcc
 
-      # TODO: Re-enable after fixing test import paths
-      # - name: Run tests
-      #   run: cd app/backend && pytest --cov=app --cov-report=xml
+      - name: Run tests
+        run: cd app/backend && pytest --cov=app --cov-report=xml
 
+      # TODO: Re-enable after setting up Codecov
       # - name: Upload coverage
       #   uses: codecov/codecov-action@v3
       #   with:
