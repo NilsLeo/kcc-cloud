@@ -195,8 +195,7 @@ class AdvancedOption(Enum):
         "flag": "--nokepub",
         "type": "boolean",
         "description": (
-            "If format is EPUB, output file with '.epub' extension "
-            "rather than '.kepub.epub'"
+            "If format is EPUB, output file with '.epub' extension " "rather than '.kepub.epub'"
         ),
     }
 
@@ -206,8 +205,7 @@ class AdvancedOption(Enum):
         "flag": "--spreadshift",
         "type": "boolean",
         "description": (
-            "Shift first page to opposite side in landscape for two page "
-            "spread alignment"
+            "Shift first page to opposite side in landscape for two page " "spread alignment"
         ),
     }
     NO_ROTATE = {
