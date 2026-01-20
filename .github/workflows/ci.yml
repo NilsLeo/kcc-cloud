@@ -22,9 +22,8 @@ jobs:
           cd app/backend
           pip install -r requirements.txt -r requirements-dev.txt
 
-      # TODO: Re-enable after resolving Black version/line-ending differences
-      # - name: Run Black
-      #   run: cd app/backend && black --check .
+      - name: Run Black
+        run: cd app/backend && black --check .
 
       # TODO: Re-enable after fixing Flake8 errors
       # - name: Run Flake8
