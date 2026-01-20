@@ -18,11 +18,14 @@ logger = logging.getLogger(__name__)
 
 # Create Flask app
 app = Flask(__name__)
+logger.info("Flask application initialized")
 
 # Initialize SocketIO for real-time updates
 # Use Redis message queue to share messages with Celery workers
 redis_url = os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0")
 socketio_cors = os.getenv("SOCKETIO_CORS_ORIGINS", "*")
+logger.info(f"Connecting to Redis message queue: {redis_url}")
+logger.info(f"SocketIO CORS origins: {socketio_cors}")
 socketio = SocketIO(
     app,
     message_queue=redis_url,
@@ -31,13 +34,17 @@ socketio = SocketIO(
     logger=False,
     engineio_logger=False,
 )
+logger.info("SocketIO initialized with Redis message queue")
 
 app.config["MAX_CONTENT_LENGTH"] = int(
     os.getenv("MAX_CONTENT_LENGTH", 1024 * 1024 * 1024)
 )  # Default 1GB max upload size
+max_size_mb = app.config["MAX_CONTENT_LENGTH"] / (1024 * 1024)
+logger.info(f"Max upload size: {max_size_mb:.0f}MB")
 
 # CORS configuration
 allowed_origins = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "*").split(",")]
+logger.info(f"CORS allowed origins: {allowed_origins}")
 
 CORS(
     app,
@@ -50,11 +57,15 @@ CORS(
 
 # Ensure data directories exist
 storage_path = os.getenv("STORAGE_PATH", "/data")
-os.makedirs(os.path.join(storage_path, "uploads"), exist_ok=True)
-os.makedirs(os.path.join(storage_path, "outputs"), exist_ok=True)
+uploads_path = os.path.join(storage_path, "uploads")
+outputs_path = os.path.join(storage_path, "outputs")
+os.makedirs(uploads_path, exist_ok=True)
+os.makedirs(outputs_path, exist_ok=True)
 
-logger.info(f"Storage path: {storage_path}")
-logger.info(f"Allowed origins: {allowed_origins}")
+logger.info(f"Storage configured:")
+logger.info(f"  - Base path: {storage_path}")
+logger.info(f"  - Uploads: {uploads_path}")
+logger.info(f"  - Outputs: {outputs_path}")
 
 # Register all Flask routes
 register_routes(app)
@@ -92,7 +103,10 @@ def handle_request_queue_status():
 app.socketio = socketio
 app.broadcast_queue_update = shared_broadcast
 
+logger.info("=" * 60)
 logger.info("MangaConverter FOSS backend started successfully")
+logger.info("Ready to accept conversion requests")
+logger.info("=" * 60)
 
 if __name__ == "__main__":
     # Development mode

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Build and optionally push the Docker image for mgc-foss
+# Build and optionally push the Docker image for kcc-cloud
 # Defaults build the production image locally for the current arch.
 
 # Determine repo root based on this script's location so the script
