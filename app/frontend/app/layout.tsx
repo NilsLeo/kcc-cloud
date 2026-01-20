@@ -10,8 +10,6 @@ import { ErrorBoundary } from "@/components/error-boundary"
 // Avoid network fetches for Google Fonts in dev containers by relying on local fonts
 // If you need Google fonts, switch back to next/font/google and ensure outbound network is available
 
-const CANONICAL_URL = process.env.NEXT_PUBLIC_CANONICAL_URL || 'http://localhost:3000'
-
 const zenMaruGothic = localFont({
   src: [
     {
@@ -80,12 +78,6 @@ export const metadata: Metadata = {
   robots: {
     index: true,
     follow: true,
-  },
-  alternates: {
-    canonical: CANONICAL_URL,
-    languages: {
-      "en-US": CANONICAL_URL,
-    },
   },
   generator: "v0.dev",
 }

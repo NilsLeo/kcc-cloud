@@ -44,8 +44,6 @@ class DeviceProfile(Enum):
     def label(self):
         return self.value["label"]
 
-# Create a dictionary of all device profiles for API use
-DEVICE_PROFILES = {
-    profile.id: profile.label for profile in DeviceProfile
-}
 
+# Create a dictionary of all device profiles for API use
+DEVICE_PROFILES = {profile.id: profile.label for profile in DeviceProfile}

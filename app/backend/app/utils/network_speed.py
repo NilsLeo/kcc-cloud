@@ -16,12 +16,12 @@ logger = logging.getLogger(__name__)
 # Redis client for caching speed test results
 try:
     redis_client = redis.Redis(
-        host='redis',
+        host="redis",
         port=6379,
         db=0,
         decode_responses=True,
         socket_connect_timeout=5,
-        socket_timeout=5
+        socket_timeout=5,
     )
     redis_client.ping()
 except Exception as e:
@@ -62,7 +62,9 @@ def get_download_speed_mbps() -> float:
     if redis_client and speed:
         try:
             redis_client.setex(SPEED_TEST_CACHE_KEY, SPEED_TEST_CACHE_TTL, str(speed))
-            logger.info(f"[NetworkSpeed] Cached speed test result: {speed:.2f} Mbps (TTL: {SPEED_TEST_CACHE_TTL}s)")
+            logger.info(
+                f"[NetworkSpeed] Cached speed test result: {speed:.2f} Mbps (TTL: {SPEED_TEST_CACHE_TTL}s)"
+            )
         except Exception as e:
             logger.warning(f"[NetworkSpeed] Failed to cache speed: {e}")
 
@@ -83,10 +85,10 @@ def run_speed_test() -> Optional[float]:
         # Run speedtest-cli with simple output format
         # --simple returns: Ping, Download, Upload
         result = subprocess.run(
-            ['python3', '-m', 'speedtest', '--simple'],
+            ["python3", "-m", "speedtest", "--simple"],
             capture_output=True,
             text=True,
-            timeout=60  # 60 second timeout
+            timeout=60,  # 60 second timeout
         )
 
         if result.returncode != 0:
@@ -94,8 +96,8 @@ def run_speed_test() -> Optional[float]:
             return None
 
         # Parse output: "Download: XXX.XX Mbit/s"
-        for line in result.stdout.strip().split('\n'):
-            if line.startswith('Download:'):
+        for line in result.stdout.strip().split("\n"):
+            if line.startswith("Download:"):
                 # Extract speed value
                 parts = line.split()
                 if len(parts) >= 2:
@@ -103,7 +105,9 @@ def run_speed_test() -> Optional[float]:
                     speed_mbps = float(speed_str)
 
                     elapsed = time.time() - start_time
-                    logger.info(f"[NetworkSpeed] Speed test completed in {elapsed:.1f}s: {speed_mbps:.2f} Mbps")
+                    logger.info(
+                        f"[NetworkSpeed] Speed test completed in {elapsed:.1f}s: {speed_mbps:.2f} Mbps"
+                    )
                     return speed_mbps
 
         logger.error(f"[NetworkSpeed] Could not parse speed test output: {result.stdout}")
@@ -113,7 +117,9 @@ def run_speed_test() -> Optional[float]:
         logger.error("[NetworkSpeed] Speed test timed out after 60 seconds")
         return None
     except FileNotFoundError:
-        logger.error("[NetworkSpeed] speedtest-cli not found. Install with: pip install speedtest-cli")
+        logger.error(
+            "[NetworkSpeed] speedtest-cli not found. Install with: pip install speedtest-cli"
+        )
         return None
     except Exception as e:
         logger.error(f"[NetworkSpeed] Speed test error: {e}")

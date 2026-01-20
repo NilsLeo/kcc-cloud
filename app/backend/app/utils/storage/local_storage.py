@@ -1,4 +1,5 @@
 """Local filesystem storage implementation to replace S3/MinIO."""
+
 import os
 import shutil
 from pathlib import Path
@@ -7,7 +8,7 @@ from pathlib import Path
 class LocalStorage:
     """Local filesystem storage for uploads and outputs."""
 
-    def __init__(self, base_path='/data'):
+    def __init__(self, base_path="/data"):
         """
         Initialize local storage.
 
@@ -15,8 +16,8 @@ class LocalStorage:
             base_path: Base directory for all file storage
         """
         self.base_path = Path(base_path)
-        self.uploads_path = self.base_path / 'uploads'
-        self.outputs_path = self.base_path / 'outputs'
+        self.uploads_path = self.base_path / "uploads"
+        self.outputs_path = self.base_path / "outputs"
 
         # Create directories if they don't exist
         self.uploads_path.mkdir(parents=True, exist_ok=True)
@@ -43,12 +44,12 @@ class LocalStorage:
         if isinstance(file_obj, (str, Path)):
             # It's a file path, copy it
             shutil.copy2(file_obj, file_path)
-        elif hasattr(file_obj, 'save'):
+        elif hasattr(file_obj, "save"):
             # It's a Flask/Werkzeug FileStorage object
             file_obj.save(str(file_path))
-        elif hasattr(file_obj, 'read'):
+        elif hasattr(file_obj, "read"):
             # It's a file-like object
-            with open(file_path, 'wb') as f:
+            with open(file_path, "wb") as f:
                 f.write(file_obj.read())
         else:
             raise ValueError(f"Unsupported file object type: {type(file_obj)}")
@@ -182,4 +183,4 @@ class LocalStorage:
 
 
 # Global storage instance
-storage = LocalStorage(base_path=os.getenv('STORAGE_PATH', '/data'))
+storage = LocalStorage(base_path=os.getenv("STORAGE_PATH", "/data"))

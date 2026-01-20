@@ -26,8 +26,8 @@ logger = setup_enhanced_logging()
 
 # Initialize Redis client (connects to redis service in docker-compose or Kubernetes)
 # Parse Redis hostname from CELERY_BROKER_URL env var for consistency
-redis_url = os.getenv('CELERY_BROKER_URL', 'redis://redis:6379/0')
-redis_host = redis_url.split('://')[1].split(':')[0]  # Extract hostname from URL
+redis_url = os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0")
+redis_host = redis_url.split("://")[1].split(":")[0]  # Extract hostname from URL
 
 try:
     redis_client = redis.Redis(
@@ -36,7 +36,7 @@ try:
         db=0,
         decode_responses=True,
         socket_connect_timeout=5,
-        socket_timeout=5
+        socket_timeout=5,
     )
     redis_client.ping()
     logger.info(f"[RedisJobStore] Redis connection established successfully to {redis_host}")
@@ -94,26 +94,30 @@ class RedisJobStore:
             redis_client.expire(job_key, RedisJobStore.JOB_TTL)
 
             # Add to session's job set for listing
-            session_key = job_data.get('session_key')
+            session_key = job_data.get("session_key")
             if session_key:
                 session_jobs_key = f"session:{session_key}:jobs"
                 redis_client.sadd(session_jobs_key, job_id)
                 redis_client.expire(session_jobs_key, RedisJobStore.JOB_TTL)
 
             log_with_context(
-                logger, 'info', '[RedisJobStore] Job created in Redis',
+                logger,
+                "info",
+                "[RedisJobStore] Job created in Redis",
                 job_id=job_id,
-                status=job_data.get('status'),
-                ttl_hours=RedisJobStore.JOB_TTL // 3600
+                status=job_data.get("status"),
+                ttl_hours=RedisJobStore.JOB_TTL // 3600,
             )
 
             return True
 
         except Exception as e:
             log_with_context(
-                logger, 'error', f'[RedisJobStore] Failed to create job: {e}',
+                logger,
+                "error",
+                f"[RedisJobStore] Failed to create job: {e}",
                 job_id=job_id,
-                error_type=type(e).__name__
+                error_type=type(e).__name__,
             )
             return False
 
@@ -143,24 +147,44 @@ class RedisJobStore:
             for key, value in job_data.items():
                 if value == "":
                     result[key] = None
-                elif key.endswith('_at') and value:
+                elif key.endswith("_at") and value:
                     # Parse datetime fields
                     try:
                         result[key] = datetime.fromisoformat(value)
                     except:
                         result[key] = value
-                elif key in ['file_size', 'upload_progress_bytes', 's3_parts_completed', 's3_parts_total']:
+                elif key in [
+                    "file_size",
+                    "upload_progress_bytes",
+                    "s3_parts_completed",
+                    "s3_parts_total",
+                ]:
                     # Parse integer fields
                     try:
                         result[key] = int(value) if value else 0
                     except:
                         result[key] = value
-                elif key in ['manga_style', 'hq', 'two_panel', 'webtoon', 'no_processing',
-                             'upscale', 'stretch', 'autolevel', 'black_borders', 'white_borders',
-                             'force_color', 'force_png', 'mozjpeg', 'no_kepub', 'spread_shift',
-                             'no_rotate', 'rotate_first']:
+                elif key in [
+                    "manga_style",
+                    "hq",
+                    "two_panel",
+                    "webtoon",
+                    "no_processing",
+                    "upscale",
+                    "stretch",
+                    "autolevel",
+                    "black_borders",
+                    "white_borders",
+                    "force_color",
+                    "force_png",
+                    "mozjpeg",
+                    "no_kepub",
+                    "spread_shift",
+                    "no_rotate",
+                    "rotate_first",
+                ]:
                     # Parse boolean fields
-                    result[key] = value.lower() == 'true' if value else False
+                    result[key] = value.lower() == "true" if value else False
                 else:
                     result[key] = value
 
@@ -168,8 +192,7 @@ class RedisJobStore:
 
         except Exception as e:
             log_with_context(
-                logger, 'error', f'[RedisJobStore] Failed to get job: {e}',
-                job_id=job_id
+                logger, "error", f"[RedisJobStore] Failed to get job: {e}", job_id=job_id
             )
             return None
 
@@ -208,8 +231,7 @@ class RedisJobStore:
 
         except Exception as e:
             log_with_context(
-                logger, 'error', f'[RedisJobStore] Failed to update job: {e}',
-                job_id=job_id
+                logger, "error", f"[RedisJobStore] Failed to update job: {e}", job_id=job_id
             )
             return False
 
@@ -237,16 +259,14 @@ class RedisJobStore:
                 redis_client.srem(session_jobs_key, job_id)
 
             log_with_context(
-                logger, 'info', '[RedisJobStore] Job deleted from Redis',
-                job_id=job_id
+                logger, "info", "[RedisJobStore] Job deleted from Redis", job_id=job_id
             )
 
             return True
 
         except Exception as e:
             log_with_context(
-                logger, 'error', f'[RedisJobStore] Failed to delete job: {e}',
-                job_id=job_id
+                logger, "error", f"[RedisJobStore] Failed to delete job: {e}", job_id=job_id
             )
             return False
 
@@ -271,8 +291,10 @@ class RedisJobStore:
 
         except Exception as e:
             log_with_context(
-                logger, 'error', f'[RedisJobStore] Failed to get session jobs: {e}',
-                session_key=session_key
+                logger,
+                "error",
+                f"[RedisJobStore] Failed to get session jobs: {e}",
+                session_key=session_key,
             )
             return []
 
@@ -305,63 +327,80 @@ class RedisJobStore:
                     continue
 
                 # Skip dismissed
-                if job_data.get('dismissed_at'):
+                if job_data.get("dismissed_at"):
                     continue
 
-                raw_status = job_data.get('status', 'UNKNOWN')
+                raw_status = job_data.get("status", "UNKNOWN")
                 # Skip terminal states except COMPLETE
-                if raw_status in ['DOWNLOADED', 'CANCELLED', 'ERRORED']:
+                if raw_status in ["DOWNLOADED", "CANCELLED", "ERRORED"]:
                     continue
 
                 # Normalize created_at to JSON-serializable ISO string if present
-                _created = job_data.get('created_at', None)
-                if _created is not None and hasattr(_created, 'isoformat'):
+                _created = job_data.get("created_at", None)
+                if _created is not None and hasattr(_created, "isoformat"):
                     _created = _created.isoformat()
 
                 # Decide emitted status (gated PROCESSING requires ETA + processing_at)
                 emit_status = raw_status
                 emit_proc_at: Any = None
                 emit_eta: Any = None
-                if raw_status == 'PROCESSING':
+                if raw_status == "PROCESSING":
                     try:
-                        proc_at = job_data.get('processing_at') or job_data.get('processing_started_at')
+                        proc_at = job_data.get("processing_at") or job_data.get(
+                            "processing_started_at"
+                        )
                         eta_at = None
                         projected_eta = None
-                        raw_pp = job_data.get('processing_progress')
+                        raw_pp = job_data.get("processing_progress")
                         if raw_pp:
                             import json as _json
+
                             parsed = _json.loads(raw_pp) if isinstance(raw_pp, str) else raw_pp
-                            eta_at = parsed.get('eta_at')
-                            projected_eta = parsed.get('projected_eta')
+                            eta_at = parsed.get("eta_at")
+                            projected_eta = parsed.get("projected_eta")
                         if eta_at is None and projected_eta is None:
-                            projected_eta = job_data.get('estimated_duration_seconds')
+                            projected_eta = job_data.get("estimated_duration_seconds")
                         if proc_at and (eta_at is not None or projected_eta is not None):
                             emit_proc_at = proc_at
                             # Prefer eta_at absolute timestamp; fallback to seconds
                             if eta_at is not None:
                                 emit_eta = str(eta_at)
                             else:
-                                emit_eta = int(projected_eta) if isinstance(projected_eta, (int, str)) else projected_eta
+                                emit_eta = (
+                                    int(projected_eta)
+                                    if isinstance(projected_eta, (int, str))
+                                    else projected_eta
+                                )
                         else:
-                            emit_status = 'QUEUED'
+                            emit_status = "QUEUED"
                     except Exception:
-                        emit_status = 'QUEUED'
+                        emit_status = "QUEUED"
 
                 job_dict: Dict[str, Any] = {
-                    'job_id': job_id,
-                    'filename': job_data.get('input_filename', ''),
-                    'status': emit_status,
-                    'device_profile': job_data.get('device_profile', ''),
-                    'file_size': int(job_data.get('file_size', 0) or 0),
-                    'created_at': _created,
+                    "job_id": job_id,
+                    "filename": job_data.get("input_filename", ""),
+                    "status": emit_status,
+                    "device_profile": job_data.get("device_profile", ""),
+                    "file_size": int(job_data.get("file_size", 0) or 0),
+                    "created_at": _created,
                 }
 
-                if emit_status == 'PROCESSING' and (emit_proc_at is not None and emit_eta is not None):
+                if emit_status == "PROCESSING" and (
+                    emit_proc_at is not None and emit_eta is not None
+                ):
                     # Provide only timestamps: processing_at and eta_at (absolute). FE will do all math.
-                    proc_iso = emit_proc_at.isoformat() if hasattr(emit_proc_at, 'isoformat') else str(emit_proc_at)
-                    if proc_iso and ('Z' not in proc_iso and '+' not in proc_iso and '-' not in proc_iso.split('T')[-1]):
-                        proc_iso = proc_iso + 'Z'
-                    job_dict['processing_at'] = proc_iso
+                    proc_iso = (
+                        emit_proc_at.isoformat()
+                        if hasattr(emit_proc_at, "isoformat")
+                        else str(emit_proc_at)
+                    )
+                    if proc_iso and (
+                        "Z" not in proc_iso
+                        and "+" not in proc_iso
+                        and "-" not in proc_iso.split("T")[-1]
+                    ):
+                        proc_iso = proc_iso + "Z"
+                    job_dict["processing_at"] = proc_iso
 
                     # Compute eta_at string if needed
                     if isinstance(emit_eta, str):
@@ -369,40 +408,51 @@ class RedisJobStore:
                     else:
                         try:
                             from datetime import datetime, timedelta
+
                             base = proc_iso
-                            if base.endswith('Z'):
-                                base = base[:-1] + '+00:00'
-                            eta_at_str = (datetime.fromisoformat(base) + timedelta(seconds=int(emit_eta))).isoformat()
+                            if base.endswith("Z"):
+                                base = base[:-1] + "+00:00"
+                            eta_at_str = (
+                                datetime.fromisoformat(base) + timedelta(seconds=int(emit_eta))
+                            ).isoformat()
                         except Exception:
                             eta_at_str = None
-                    if eta_at_str is not None and ('Z' not in eta_at_str and '+' not in eta_at_str and '-' not in eta_at_str.split('T')[-1]):
-                        eta_at_str = eta_at_str + 'Z'
+                    if eta_at_str is not None and (
+                        "Z" not in eta_at_str
+                        and "+" not in eta_at_str
+                        and "-" not in eta_at_str.split("T")[-1]
+                    ):
+                        eta_at_str = eta_at_str + "Z"
                     if eta_at_str is not None:
-                        job_dict['eta_at'] = eta_at_str
+                        job_dict["eta_at"] = eta_at_str
 
-                if emit_status == 'UPLOADING':
+                if emit_status == "UPLOADING":
                     parts_key = f"multipart_parts:{job_id}"
                     try:
                         parts_count = redis_client.hlen(parts_key)
                     except Exception:
                         parts_count = 0
-                    s3_parts_total = int(job_data.get('s3_parts_total', 0) or 0)
+                    s3_parts_total = int(job_data.get("s3_parts_total", 0) or 0)
                     if parts_count > 0 and s3_parts_total:
-                        job_dict['upload_progress'] = {
-                            'completed_parts': parts_count,
-                            'total_parts': s3_parts_total,
-                            'uploaded_bytes': int(job_data.get('upload_progress_bytes', 0) or 0),
-                            'total_bytes': int(job_data.get('file_size', 0) or 0),
-                            'percentage': round((parts_count / s3_parts_total) * 100, 1),
+                        job_dict["upload_progress"] = {
+                            "completed_parts": parts_count,
+                            "total_parts": s3_parts_total,
+                            "uploaded_bytes": int(job_data.get("upload_progress_bytes", 0) or 0),
+                            "total_bytes": int(job_data.get("file_size", 0) or 0),
+                            "percentage": round((parts_count / s3_parts_total) * 100, 1),
                         }
 
-                if emit_status == 'COMPLETE':
-                    job_dict['output_filename'] = job_data.get('output_filename', '')
-                    job_dict['output_file_size'] = int(job_data.get('output_file_size', 0) or 0)
+                if emit_status == "COMPLETE":
+                    job_dict["output_filename"] = job_data.get("output_filename", "")
+                    job_dict["output_file_size"] = int(job_data.get("output_file_size", 0) or 0)
                     try:
-                        completed_at = job_data.get('completed_at')
+                        completed_at = job_data.get("completed_at")
                         if completed_at:
-                            job_dict['completed_at'] = completed_at.isoformat() if hasattr(completed_at, 'isoformat') else str(completed_at)
+                            job_dict["completed_at"] = (
+                                completed_at.isoformat()
+                                if hasattr(completed_at, "isoformat")
+                                else str(completed_at)
+                            )
                     except Exception:
                         pass
 
@@ -410,8 +460,10 @@ class RedisJobStore:
 
             # Sort by created_at if present, else by job_id stable order; newest first not guaranteed via Redis
             try:
+
                 def _key(j):
-                    return j.get('created_at') or ''
+                    return j.get("created_at") or ""
+
                 jobs.sort(key=_key, reverse=True)
             except Exception:
                 pass
@@ -433,7 +485,7 @@ class RedisJobStore:
         Returns:
             bool: True if terminal state
         """
-        terminal_states = ['COMPLETE', 'DOWNLOADED', 'CANCELLED', 'ERROR']
+        terminal_states = ["COMPLETE", "DOWNLOADED", "CANCELLED", "ERROR"]
         return status in terminal_states
 
     @staticmethod
@@ -464,11 +516,11 @@ class RedisJobStore:
                             setattr(existing_job, key, value)
                 else:
                     # Create new record - remove 'id' and map field names
-                    job_data_copy = {k: v for k, v in job_data.items() if k != 'id'}
+                    job_data_copy = {k: v for k, v in job_data.items() if k != "id"}
 
                     # Map Redis field names to DB model field names
-                    if 'file_size' in job_data_copy:
-                        job_data_copy['input_file_size'] = job_data_copy.pop('file_size')
+                    if "file_size" in job_data_copy:
+                        job_data_copy["input_file_size"] = job_data_copy.pop("file_size")
 
                     new_job = ConversionJob(id=job_id, **job_data_copy)
                     db.add(new_job)
@@ -479,6 +531,7 @@ class RedisJobStore:
                 # Fetch buffered logs from Redis and persist with the job
                 try:
                     import json as _json
+
                     if redis_client:
                         logs_key = f"job:{job_id}:logs"
                         raw_logs = redis_client.lrange(logs_key, 0, -1)
@@ -492,15 +545,15 @@ class RedisJobStore:
                                 item = _json.loads(raw)
                             except Exception:
                                 # Best-effort parse; fallback to message-only
-                                item = {'level': 'INFO', 'message': str(raw), 'source': 'backend'}
+                                item = {"level": "INFO", "message": str(raw), "source": "backend"}
 
                             entry = LogEntry(
-                                level=item.get('level', 'INFO'),
-                                message=item.get('message', ''),
-                                source=item.get('source', 'backend'),
+                                level=item.get("level", "INFO"),
+                                message=item.get("message", ""),
+                                source=item.get("source", "backend"),
                                 job_id=job_id,
-                                user_id=item.get('user_id'),
-                                context=item.get('context') or None,
+                                user_id=item.get("user_id"),
+                                context=item.get("context") or None,
                             )
                             entries.append(entry)
 
@@ -516,39 +569,49 @@ class RedisJobStore:
                             pass
                 except Exception as log_persist_error:
                     # Do not fail the whole operation if logs fail; record warning
-                    logger.warning(f"[RedisJobStore] Failed to persist logs for job {job_id}: {log_persist_error}")
+                    logger.warning(
+                        f"[RedisJobStore] Failed to persist logs for job {job_id}: {log_persist_error}"
+                    )
 
                 log_with_context(
-                    logger, 'info', '[RedisJobStore] Job persisted to database',
+                    logger,
+                    "info",
+                    "[RedisJobStore] Job persisted to database",
                     job_id=job_id,
-                    status=job_data.get('status')
+                    status=job_data.get("status"),
                 )
 
                 # Clean up Redis: remove from session set only for truly terminal states (not COMPLETE)
                 # COMPLETE jobs should remain visible so users can download them
-                status = job_data.get('status', '')
-                if status in ['DOWNLOADED', 'CANCELLED', 'ERRORED']:
-                    session_key = job_data.get('session_key')
+                status = job_data.get("status", "")
+                if status in ["DOWNLOADED", "CANCELLED", "ERRORED"]:
+                    session_key = job_data.get("session_key")
                     if session_key and redis_client:
                         try:
                             session_jobs_key = f"session:{session_key}:jobs"
                             redis_client.srem(session_jobs_key, job_id)
                             log_with_context(
-                                logger, 'info', '[RedisJobStore] Removed terminal job from session set',
+                                logger,
+                                "info",
+                                "[RedisJobStore] Removed terminal job from session set",
                                 job_id=job_id,
-                                status=status
+                                status=status,
                             )
                         except Exception as cleanup_error:
-                            logger.warning(f"Failed to cleanup session set for job {job_id}: {cleanup_error}")
+                            logger.warning(
+                                f"Failed to cleanup session set for job {job_id}: {cleanup_error}"
+                            )
 
                 return True
 
             except Exception as e:
                 db.rollback()
                 log_with_context(
-                    logger, 'error', f'[RedisJobStore] Failed to persist job to DB: {e}',
+                    logger,
+                    "error",
+                    f"[RedisJobStore] Failed to persist job to DB: {e}",
                     job_id=job_id,
-                    error_type=type(e).__name__
+                    error_type=type(e).__name__,
                 )
                 return False
             finally:
@@ -556,8 +619,7 @@ class RedisJobStore:
 
         except Exception as e:
             log_with_context(
-                logger, 'error', f'[RedisJobStore] Failed to import DB modules: {e}',
-                job_id=job_id
+                logger, "error", f"[RedisJobStore] Failed to import DB modules: {e}", job_id=job_id
             )
             return False
 
@@ -577,7 +639,7 @@ def get_session_for_job(job_id: str) -> Optional[str]:
 
     try:
         job_key = f"job:{job_id}"
-        session_key = redis_client.hget(job_key, 'session_key')
+        session_key = redis_client.hget(job_key, "session_key")
         return session_key if session_key else None
     except Exception as e:
         logger.error(f"[RedisJobStore] Failed to get session for job {job_id}: {e}")
@@ -606,26 +668,32 @@ def acquire_cancellation_lock(session_key: str, job_id: str) -> bool:
 
         if lock_acquired:
             log_with_context(
-                logger, 'info', '[RedisJobStore] Cancellation lock acquired',
+                logger,
+                "info",
+                "[RedisJobStore] Cancellation lock acquired",
                 session_key=session_key,
-                job_id=job_id
+                job_id=job_id,
             )
             return True
         else:
             active_job_id = redis_client.get(lock_key)
             log_with_context(
-                logger, 'warning', '[RedisJobStore] Cancellation already in progress',
+                logger,
+                "warning",
+                "[RedisJobStore] Cancellation already in progress",
                 session_key=session_key,
                 requested_job_id=job_id,
-                active_job_id=active_job_id
+                active_job_id=active_job_id,
             )
             return False
 
     except Exception as e:
         log_with_context(
-            logger, 'error', f'[RedisJobStore] Failed to acquire cancellation lock: {e}',
+            logger,
+            "error",
+            f"[RedisJobStore] Failed to acquire cancellation lock: {e}",
             session_key=session_key,
-            job_id=job_id
+            job_id=job_id,
         )
         return True  # Allow operation on error
 
@@ -652,25 +720,31 @@ def release_cancellation_lock(session_key: str, job_id: str) -> bool:
         if current_lock_holder == job_id:
             redis_client.delete(lock_key)
             log_with_context(
-                logger, 'info', '[RedisJobStore] Cancellation lock released',
+                logger,
+                "info",
+                "[RedisJobStore] Cancellation lock released",
                 session_key=session_key,
-                job_id=job_id
+                job_id=job_id,
             )
             return True
         else:
             log_with_context(
-                logger, 'warning', '[RedisJobStore] Lock release attempted by non-holder',
+                logger,
+                "warning",
+                "[RedisJobStore] Lock release attempted by non-holder",
                 session_key=session_key,
                 requested_job_id=job_id,
-                current_holder=current_lock_holder
+                current_holder=current_lock_holder,
             )
             return False
 
     except Exception as e:
         log_with_context(
-            logger, 'error', f'[RedisJobStore] Failed to release cancellation lock: {e}',
+            logger,
+            "error",
+            f"[RedisJobStore] Failed to release cancellation lock: {e}",
             session_key=session_key,
-            job_id=job_id
+            job_id=job_id,
         )
         return False
 
@@ -727,161 +801,181 @@ def get_active_jobs_for_session(session_key: str) -> List[Dict[str, Any]]:
                 continue
 
             # Skip any dismissed jobs (user explicitly dismissed them from UI)
-            dismissed_at = job_data.get('dismissed_at')
+            dismissed_at = job_data.get("dismissed_at")
             if dismissed_at:
                 logger.debug(f"Skipping dismissed job {job_id} (status {job_data.get('status')})")
                 continue
 
             # Skip jobs in terminal states EXCEPT COMPLETE (users need to see COMPLETE jobs)
-            raw_status = job_data.get('status', 'UNKNOWN')
-            if raw_status in ['DOWNLOADED', 'CANCELLED', 'ERRORED']:
+            raw_status = job_data.get("status", "UNKNOWN")
+            if raw_status in ["DOWNLOADED", "CANCELLED", "ERRORED"]:
                 logger.debug(f"Skipping terminal state job {job_id} with status {raw_status}")
                 continue
 
             # Format job for API response (same format as /api/queue/status)
             # Normalize datetime fields to JSON-serializable strings
-            _created = job_data.get('created_at')
-            if _created is not None and hasattr(_created, 'isoformat'):
+            _created = job_data.get("created_at")
+            if _created is not None and hasattr(_created, "isoformat"):
                 _created = _created.isoformat()
 
             # Compute emitted status with gating for PROCESSING (requires ETA + processing_at)
             emit_status = raw_status
             emit_proc_at: Any = None
             emit_eta: Any = None
-            if raw_status == 'PROCESSING':
+            if raw_status == "PROCESSING":
                 try:
-                    proc_at = job_data.get('processing_at') or job_data.get('processing_started_at')
+                    proc_at = job_data.get("processing_at") or job_data.get("processing_started_at")
                     eta_at = None
                     projected_eta = None
-                    raw_pp = job_data.get('processing_progress')
+                    raw_pp = job_data.get("processing_progress")
                     if raw_pp:
                         import json as _json
+
                         parsed = _json.loads(raw_pp) if isinstance(raw_pp, str) else raw_pp
-                        eta_at = parsed.get('eta_at')
-                        projected_eta = parsed.get('projected_eta')
+                        eta_at = parsed.get("eta_at")
+                        projected_eta = parsed.get("projected_eta")
                     if eta_at is None and projected_eta is None:
-                        projected_eta = job_data.get('estimated_duration_seconds')
+                        projected_eta = job_data.get("estimated_duration_seconds")
                     if proc_at and (eta_at is not None or projected_eta is not None):
                         emit_proc_at = proc_at
                         if eta_at is not None:
                             emit_eta = str(eta_at)
                         else:
-                            emit_eta = int(projected_eta) if isinstance(projected_eta, (int, str)) else projected_eta
+                            emit_eta = (
+                                int(projected_eta)
+                                if isinstance(projected_eta, (int, str))
+                                else projected_eta
+                            )
                     else:
-                        emit_status = 'QUEUED'
+                        emit_status = "QUEUED"
                 except Exception:
-                    emit_status = 'QUEUED'
+                    emit_status = "QUEUED"
 
             job_dict = {
-                'job_id': job_id,
-                'filename': job_data.get('input_filename', ''),
-                'status': emit_status,
-                'device_profile': job_data.get('device_profile', ''),
-                'file_size': int(job_data.get('file_size', 0)),
-                'created_at': _created,
+                "job_id": job_id,
+                "filename": job_data.get("input_filename", ""),
+                "status": emit_status,
+                "device_profile": job_data.get("device_profile", ""),
+                "file_size": int(job_data.get("file_size", 0)),
+                "created_at": _created,
             }
 
             # Mark dismissal flag for COMPLETE jobs
-            if emit_status == 'COMPLETE':
-                job_dict['is_dismissed'] = True if dismissed_at else False
+            if emit_status == "COMPLETE":
+                job_dict["is_dismissed"] = True if dismissed_at else False
 
             # Add status-specific fields based on emitted status
             status = emit_status
 
-            if status == 'QUEUED':
+            if status == "QUEUED":
                 # Worker download speed for simulating download progress
                 from utils.network_speed import get_download_speed_mbps
-                job_dict['worker_download_speed_mbps'] = get_download_speed_mbps()
 
-            if status == 'UPLOADING':
+                job_dict["worker_download_speed_mbps"] = get_download_speed_mbps()
+
+            if status == "UPLOADING":
                 # Upload progress from Redis multipart tracking
                 parts_key = f"multipart_parts:{job_id}"
                 parts_count = redis_client.hlen(parts_key) if redis_client else 0
-                s3_parts_total = int(job_data.get('s3_parts_total', 0))
+                s3_parts_total = int(job_data.get("s3_parts_total", 0))
 
                 if parts_count > 0 and s3_parts_total:
-                    job_dict['upload_progress'] = {
-                        'completed_parts': parts_count,
-                        'total_parts': s3_parts_total,
-                        'uploaded_bytes': int(job_data.get('upload_progress_bytes', 0)),
-                        'total_bytes': int(job_data.get('file_size', 0)),
-                        'percentage': round((parts_count / s3_parts_total) * 100, 1)
+                    job_dict["upload_progress"] = {
+                        "completed_parts": parts_count,
+                        "total_parts": s3_parts_total,
+                        "uploaded_bytes": int(job_data.get("upload_progress_bytes", 0)),
+                        "total_bytes": int(job_data.get("file_size", 0)),
+                        "percentage": round((parts_count / s3_parts_total) * 100, 1),
                     }
 
-            if emit_status == 'PROCESSING' and (emit_proc_at is not None and emit_eta is not None):
-                proc_iso = emit_proc_at.isoformat() if hasattr(emit_proc_at, 'isoformat') else str(emit_proc_at)
-                if proc_iso and ('Z' not in proc_iso and '+' not in proc_iso and '-' not in proc_iso.split('T')[-1]):
-                    proc_iso = proc_iso + 'Z'
-                job_dict['processing_at'] = proc_iso
+            if emit_status == "PROCESSING" and (emit_proc_at is not None and emit_eta is not None):
+                proc_iso = (
+                    emit_proc_at.isoformat()
+                    if hasattr(emit_proc_at, "isoformat")
+                    else str(emit_proc_at)
+                )
+                if proc_iso and (
+                    "Z" not in proc_iso
+                    and "+" not in proc_iso
+                    and "-" not in proc_iso.split("T")[-1]
+                ):
+                    proc_iso = proc_iso + "Z"
+                job_dict["processing_at"] = proc_iso
                 if isinstance(emit_eta, str):
                     eta_at_str = emit_eta
                 else:
                     try:
                         from datetime import datetime, timedelta
+
                         base = proc_iso
-                        if base.endswith('Z'):
-                            base = base[:-1] + '+00:00'
-                        eta_at_str = (datetime.fromisoformat(base) + timedelta(seconds=int(emit_eta))).isoformat()
+                        if base.endswith("Z"):
+                            base = base[:-1] + "+00:00"
+                        eta_at_str = (
+                            datetime.fromisoformat(base) + timedelta(seconds=int(emit_eta))
+                        ).isoformat()
                     except Exception:
                         eta_at_str = None
-                if eta_at_str is not None and ('Z' not in eta_at_str and '+' not in eta_at_str and '-' not in eta_at_str.split('T')[-1]):
-                    eta_at_str = eta_at_str + 'Z'
+                if eta_at_str is not None and (
+                    "Z" not in eta_at_str
+                    and "+" not in eta_at_str
+                    and "-" not in eta_at_str.split("T")[-1]
+                ):
+                    eta_at_str = eta_at_str + "Z"
                 if eta_at_str is not None:
-                    job_dict['eta_at'] = eta_at_str
+                    job_dict["eta_at"] = eta_at_str
 
-            if status == 'COMPLETE':
+            if status == "COMPLETE":
                 # Output file info
-                job_dict['output_filename'] = job_data.get('output_filename', '')
-                job_dict['output_file_size'] = int(job_data.get('output_file_size', 0))
+                job_dict["output_filename"] = job_data.get("output_filename", "")
+                job_dict["output_file_size"] = int(job_data.get("output_file_size", 0))
                 # Include completion timestamp if present, with robust DB fallback
                 try:
-                    completed_at = job_data.get('completed_at')
+                    completed_at = job_data.get("completed_at")
                     if completed_at:
-                        if hasattr(completed_at, 'isoformat'):
-                            job_dict['completed_at'] = completed_at.isoformat()
+                        if hasattr(completed_at, "isoformat"):
+                            job_dict["completed_at"] = completed_at.isoformat()
                         else:
-                            job_dict['completed_at'] = str(completed_at)
+                            job_dict["completed_at"] = str(completed_at)
                 except Exception:
                     # Ignore and attempt DB fallback below
                     pass
                 # Final safeguard: DB fallback if still missing
-                if 'completed_at' not in job_dict:
+                if "completed_at" not in job_dict:
                     try:
                         from database import get_db_session, ConversionJob
+
                         db2 = get_db_session()
                         try:
                             j = db2.query(ConversionJob).get(job_id)
                             if j and j.completed_at:
-                                job_dict['completed_at'] = j.completed_at.isoformat()
+                                job_dict["completed_at"] = j.completed_at.isoformat()
                         finally:
                             db2.close()
                     except Exception:
                         pass
                 # Include dismissed timestamp if present
                 try:
-                    dismissed_at = job_data.get('dismissed_at')
+                    dismissed_at = job_data.get("dismissed_at")
                     if dismissed_at:
                         # If it's a datetime, convert to ISO
-                        if hasattr(dismissed_at, 'isoformat'):
-                            job_dict['dismissed_at'] = dismissed_at.isoformat()
+                        if hasattr(dismissed_at, "isoformat"):
+                            job_dict["dismissed_at"] = dismissed_at.isoformat()
                         else:
-                            job_dict['dismissed_at'] = str(dismissed_at)
+                            job_dict["dismissed_at"] = str(dismissed_at)
                 except Exception:
                     pass
 
                 # Generate download URL
-                output_filename = job_data.get('output_filename')
+                output_filename = job_data.get("output_filename")
                 if output_filename:
                     try:
                         from utils.storage.s3_storage import S3Storage
+
                         storage = S3Storage()
                         # Construct full S3 path: session_key/job_id/output/filename
                         s3_key = f"{session_key}/{job_id}/output/{output_filename}"
-                        download_url = storage.presigned_url(
-                            s3_key,
-                            expires=604800  # 7 days
-                        )
-                        job_dict['download_url'] = download_url
+                        download_url = storage.presigned_url(s3_key, expires=604800)  # 7 days
+                        job_dict["download_url"] = download_url
                     except Exception as e:
                         logger.error(f"Failed to generate download URL for job {job_id}: {e}")
 

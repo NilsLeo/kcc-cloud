@@ -16,7 +16,7 @@ def generate_kcc_command(
     device_profile: str = "",
     options: Optional[Dict[str, Any]] = None,
     job_id: str = None,
-    user_id: str = None
+    user_id: str = None,
 ) -> List[str]:
     """
     Generate a KCC command for conversion.
@@ -69,54 +69,62 @@ def generate_command(options: Dict[str, Any], job_id: str = None, user_id: str =
     if device_profile:
         command.extend(["-p", str(device_profile)])
         log_with_context(
-            logger, 'info', f'Adding device profile to command: {device_profile}',
+            logger,
+            "info",
+            f"Adding device profile to command: {device_profile}",
             job_id=job_id,
             user_id=user_id,
             device_profile=device_profile,
-            source='command_generator'
+            source="command_generator",
         )
 
     # Add advanced options using enum-based approach
     if advanced_options:
         log_with_context(
-            logger, 'info', f'Processing advanced options: {list(advanced_options.keys())}',
+            logger,
+            "info",
+            f"Processing advanced options: {list(advanced_options.keys())}",
             job_id=job_id,
             user_id=user_id,
             advanced_options=advanced_options,
-            source='command_generator'
+            source="command_generator",
         )
-        
+
         for option_key, option_value in advanced_options.items():
             if option_key in ADVANCED_OPTIONS_BY_KEY and option_value:
                 option_enum = ADVANCED_OPTIONS_BY_KEY[option_key]
-                
+
                 # Handle different option types
                 if option_enum.type == "boolean" and option_value:
                     command.append(option_enum.flag)
-                    
+
                 elif option_enum.type in ["number", "text", "select"] and option_value:
                     # For options that take values
                     if option_enum.flag.startswith("--"):
                         command.extend([option_enum.flag, str(option_value)])
                     else:
                         command.extend([option_enum.flag, str(option_value)])
-                
+
                 log_with_context(
-                    logger, 'debug', f'Added option: {option_enum.flag} = {option_value}',
+                    logger,
+                    "debug",
+                    f"Added option: {option_enum.flag} = {option_value}",
                     job_id=job_id,
                     user_id=user_id,
                     option_key=option_key,
                     option_value=option_value,
                     flag=option_enum.flag,
-                    source='command_generator'
+                    source="command_generator",
                 )
 
-    command_str = ' '.join(command)
+    command_str = " ".join(command)
     log_with_context(
-        logger, 'info', f'Generated command: {command_str}',
+        logger,
+        "info",
+        f"Generated command: {command_str}",
         job_id=job_id,
         user_id=user_id,
         command=command,
-        source='command_generator'
+        source="command_generator",
     )
     return command

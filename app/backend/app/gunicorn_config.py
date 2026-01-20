@@ -8,6 +8,7 @@ after each fork, forcing Celery to create fresh connections in each worker.
 
 import logging
 
+
 def post_fork(server, worker):
     """
     Called just after a worker has been forked.
@@ -15,6 +16,7 @@ def post_fork(server, worker):
     Note: eventlet.monkey_patch() is applied in wsgi.py before any imports.
     """
     server.log.info(f"Worker {worker.pid} spawned")
+
 
 # Gunicorn server configuration
 bind = "0.0.0.0:8060"

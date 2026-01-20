@@ -19,8 +19,7 @@ def setup_enhanced_logging(name: Optional[str] = None, level: int = logging.INFO
     if not logger.handlers:
         handler = logging.StreamHandler(sys.stdout)
         formatter = logging.Formatter(
-            '[%(asctime)s] [%(levelname)s] %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S'
+            "[%(asctime)s] [%(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
         )
         handler.setFormatter(formatter)
         logger.addHandler(handler)
@@ -29,12 +28,7 @@ def setup_enhanced_logging(name: Optional[str] = None, level: int = logging.INFO
     return logger
 
 
-def log_with_context(
-    logger: logging.Logger,
-    level: str,
-    message: str,
-    **context: Any
-) -> None:
+def log_with_context(logger: logging.Logger, level: str, message: str, **context: Any) -> None:
     """
     Log a message with additional context information.
 

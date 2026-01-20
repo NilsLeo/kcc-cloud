@@ -24,21 +24,20 @@ from utils.generated_estimator import estimate_from_job
 
 # Setup simple logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
 
 @celery_app.task(
     bind=True,
-    name='mangaconverter.convert_comic',
+    name="mangaconverter.convert_comic",
     max_retries=3,
     default_retry_delay=60,
     autoretry_for=(Exception,),
     retry_backoff=True,
     retry_backoff_max=600,
-    retry_jitter=True
+    retry_jitter=True,
 )
 def convert_comic_task(self, job_id):
     """
@@ -71,11 +70,14 @@ def convert_comic_task(self, job_id):
 
         # Mirror basic PROCESSING state to Redis (broadcast deferred until ETA is known)
         try:
-            RedisJobStore.update_job(job_id, {
-                'status': JobStatus.PROCESSING.value,
-                'processing_at': job.processing_at,
-                'processing_started_at': job.processing_started_at,
-            })
+            RedisJobStore.update_job(
+                job_id,
+                {
+                    "status": JobStatus.PROCESSING.value,
+                    "processing_at": job.processing_at,
+                    "processing_started_at": job.processing_started_at,
+                },
+            )
         except Exception:
             pass
 
@@ -89,55 +91,69 @@ def convert_comic_task(self, job_id):
             try:
                 p = Path(path)
                 suffix = p.suffix.lower()
-                image_exts = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tif', '.tiff'}
+                image_exts = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".tif", ".tiff"}
 
                 # PDF
-                if suffix == '.pdf':
+                if suffix == ".pdf":
                     try:
                         try:
                             import fitz  # PyMuPDF
+
                             with fitz.open(path) as doc:
                                 return int(doc.page_count)
                         except Exception:
                             import pymupdf  # type: ignore
+
                             with pymupdf.open(path) as doc:  # pragma: no cover
                                 return int(doc.page_count)
                     except Exception:
                         return 0
 
                 # EPUB
-                if suffix == '.epub':
+                if suffix == ".epub":
                     import zipfile
+
                     try:
-                        with zipfile.ZipFile(path, 'r') as zf:
-                            return sum(1 for n in zf.namelist() if Path(n).suffix.lower() in image_exts)
+                        with zipfile.ZipFile(path, "r") as zf:
+                            return sum(
+                                1 for n in zf.namelist() if Path(n).suffix.lower() in image_exts
+                            )
                     except Exception:
                         return 0
 
                 # ZIP, CBZ
-                if suffix in {'.zip', '.cbz'}:
+                if suffix in {".zip", ".cbz"}:
                     import zipfile
+
                     try:
-                        with zipfile.ZipFile(path, 'r') as zf:
-                            return sum(1 for n in zf.namelist() if Path(n).suffix.lower() in image_exts)
+                        with zipfile.ZipFile(path, "r") as zf:
+                            return sum(
+                                1 for n in zf.namelist() if Path(n).suffix.lower() in image_exts
+                            )
                     except Exception:
                         return 0
 
                 # RAR, CBR
-                if suffix in {'.rar', '.cbr'}:
+                if suffix in {".rar", ".cbr"}:
                     try:
                         import rarfile
-                        with rarfile.RarFile(path, 'r') as rf:
-                            return sum(1 for n in rf.namelist() if Path(n).suffix.lower() in image_exts)
+
+                        with rarfile.RarFile(path, "r") as rf:
+                            return sum(
+                                1 for n in rf.namelist() if Path(n).suffix.lower() in image_exts
+                            )
                     except Exception:
                         return 0
 
                 # 7Z, CB7
-                if suffix in {'.7z', '.cb7'}:
+                if suffix in {".7z", ".cb7"}:
                     try:
                         import py7zr
-                        with py7zr.SevenZipFile(path, 'r') as szf:
-                            return sum(1 for n in szf.getnames() if Path(n).suffix.lower() in image_exts)
+
+                        with py7zr.SevenZipFile(path, "r") as szf:
+                            return sum(
+                                1 for n in szf.getnames() if Path(n).suffix.lower() in image_exts
+                            )
                     except Exception:
                         return 0
 
@@ -159,16 +175,13 @@ def convert_comic_task(self, job_id):
 
         file_size = os.path.getsize(input_path)
         job_data = {
-            'page_count': page_count,
-            'file_size': file_size,
-            'filename': job.input_filename or job.original_filename,
-            'advanced_options': job.get_options_dict()
+            "page_count": page_count,
+            "file_size": file_size,
+            "filename": job.input_filename or job.original_filename,
+            "advanced_options": job.get_options_dict(),
         }
-        # TEMPORARY: Hard-coded for demonstration purposes - actual processing time was ~61s
-        # TODO: REVERT THIS - uncomment the line below to restore dynamic ETA calculation
-        # projected_eta = estimate_from_job(job_data)
-        projected_eta = 61
-        logger.info(f"Estimated processing time: {projected_eta}s for job {job_id} (DEMO MODE - hard-coded)")
+        projected_eta = estimate_from_job(job_data)
+        logger.info(f"Estimated processing time: {projected_eta}s for job {job_id}")
 
         # Store in database
         job.estimated_duration_seconds = projected_eta
@@ -176,13 +189,18 @@ def convert_comic_task(self, job_id):
 
         # Store in Redis for frontend - provide absolute ETA timestamp (eta_at) and projected seconds for fallback
         try:
-            eta_at = (job.processing_started_at or job.processing_at or datetime.now(timezone.utc)) + timedelta(seconds=int(projected_eta or 0))
-            RedisJobStore.update_job(job_id, {
-                'processing_progress': {
-                    'eta_at': eta_at.isoformat(),
-                    'projected_eta': projected_eta,
-                }
-            })
+            eta_at = (
+                job.processing_started_at or job.processing_at or datetime.now(timezone.utc)
+            ) + timedelta(seconds=int(projected_eta or 0))
+            RedisJobStore.update_job(
+                job_id,
+                {
+                    "processing_progress": {
+                        "eta_at": eta_at.isoformat(),
+                        "projected_eta": projected_eta,
+                    }
+                },
+            )
             logger.info(f"Updated Redis with projected_eta={projected_eta}s for job {job_id}")
         except Exception:
             pass
@@ -191,7 +209,7 @@ def convert_comic_task(self, job_id):
         broadcast_queue_update()
 
         # Create temporary directory for conversion
-        temp_dir = tempfile.mkdtemp(prefix=f'kcc_{job_id}_')
+        temp_dir = tempfile.mkdtemp(prefix=f"kcc_{job_id}_")
         logger.info(f"Created temp directory: {temp_dir}")
 
         # Generate KCC command
@@ -200,7 +218,7 @@ def convert_comic_task(self, job_id):
             input_path=input_path,
             output_dir=temp_dir,
             device_profile=job.device_profile,
-            options=options
+            options=options,
         )
 
         logger.info(f"Running KCC command: {' '.join(kcc_command)}")
@@ -212,7 +230,7 @@ def convert_comic_task(self, job_id):
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             universal_newlines=True,
-            cwd=temp_dir
+            cwd=temp_dir,
         )
 
         # Stream output
@@ -229,8 +247,8 @@ def convert_comic_task(self, job_id):
         job.actual_duration = int((end_time - start_time).total_seconds())
 
         # Find output file
-        output_files = list(Path(temp_dir).glob('*'))
-        output_files = [f for f in output_files if f.is_file() and not f.name.startswith('.')]
+        output_files = list(Path(temp_dir).glob("*"))
+        output_files = [f for f in output_files if f.is_file() and not f.name.startswith(".")]
 
         if not output_files:
             raise FileNotFoundError("No output file produced by KCC")
@@ -254,11 +272,22 @@ def convert_comic_task(self, job_id):
             start_dt = job.processing_started_at or job.processing_at
             end_dt = job.completed_at
             if start_dt and end_dt:
-                if (hasattr(start_dt, 'tzinfo') and start_dt.tzinfo) and (hasattr(end_dt, 'tzinfo') and end_dt.tzinfo):
+                if (hasattr(start_dt, "tzinfo") and start_dt.tzinfo) and (
+                    hasattr(end_dt, "tzinfo") and end_dt.tzinfo
+                ):
                     job.actual_duration = int((end_dt - start_dt).total_seconds())
                 else:
                     # Normalize to naive before subtracting
-                    job.actual_duration = int(((end_dt.replace(tzinfo=None) if hasattr(end_dt, 'replace') else end_dt) - (start_dt.replace(tzinfo=None) if hasattr(start_dt, 'replace') else start_dt)).total_seconds())
+                    job.actual_duration = int(
+                        (
+                            (end_dt.replace(tzinfo=None) if hasattr(end_dt, "replace") else end_dt)
+                            - (
+                                start_dt.replace(tzinfo=None)
+                                if hasattr(start_dt, "replace")
+                                else start_dt
+                            )
+                        ).total_seconds()
+                    )
         except Exception:
             pass
 
@@ -266,13 +295,16 @@ def convert_comic_task(self, job_id):
 
         # Mirror to Redis
         try:
-            RedisJobStore.update_job(job_id, {
-                'status': JobStatus.COMPLETE.value,
-                'completed_at': job.completed_at,
-                'output_filename': job.output_filename,
-                'output_file_size': job.output_file_size or 0,
-                'actual_duration': job.actual_duration or 0,
-            })
+            RedisJobStore.update_job(
+                job_id,
+                {
+                    "status": JobStatus.COMPLETE.value,
+                    "completed_at": job.completed_at,
+                    "output_filename": job.output_filename,
+                    "output_file_size": job.output_file_size or 0,
+                    "actual_duration": job.actual_duration or 0,
+                },
+            )
         except Exception:
             pass
 
@@ -281,11 +313,7 @@ def convert_comic_task(self, job_id):
 
         logger.info(f"Job {job_id} completed successfully")
 
-        return {
-            'status': 'success',
-            'job_id': job_id,
-            'output_filename': output_filename
-        }
+        return {"status": "success", "job_id": job_id, "output_filename": output_filename}
 
     except Exception as e:
         logger.error(f"Job {job_id} failed: {str(e)}", exc_info=True)
@@ -301,11 +329,14 @@ def convert_comic_task(self, job_id):
 
                 # Mirror to Redis
                 try:
-                    RedisJobStore.update_job(job_id, {
-                        'status': JobStatus.ERRORED.value,
-                        'errored_at': job.errored_at,
-                        'error_message': job.error_message,
-                    })
+                    RedisJobStore.update_job(
+                        job_id,
+                        {
+                            "status": JobStatus.ERRORED.value,
+                            "errored_at": job.errored_at,
+                            "error_message": job.error_message,
+                        },
+                    )
                 except Exception:
                     pass
 

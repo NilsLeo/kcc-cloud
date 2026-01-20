@@ -1,10 +1,12 @@
 """
 Shared SocketIO broadcasting utility for both Flask and Celery workers.
 """
+
 import logging
 from flask_socketio import SocketIO
 from datetime import datetime
 from database.models import get_db_session, ConversionJob
+
 try:
     # Prefer Redis-backed queue data
     from utils.redis_job_store import get_all_active_jobs
@@ -24,13 +26,10 @@ def get_socketio_instance():
 
     if _socketio_instance is None:
         import os
-        redis_url = os.getenv('CELERY_BROKER_URL', 'redis://redis:6379/0')
 
-        _socketio_instance = SocketIO(
-            message_queue=redis_url,
-            logger=False,
-            engineio_logger=False
-        )
+        redis_url = os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0")
+
+        _socketio_instance = SocketIO(message_queue=redis_url, logger=False, engineio_logger=False)
 
     return _socketio_instance
 
@@ -51,13 +50,17 @@ def broadcast_queue_update():
         try:
             proc_debug = []
             for j in jobs_list:
-                if j.get('status') == 'PROCESSING':
-                    pp = j.get('processing_progress') or {}
-                    proc_debug.append({
-                        'job_id': j.get('job_id'),
-                        'has_eta': 'projected_eta' in pp and pp.get('projected_eta') is not None,
-                        'has_processing_at': 'processing_at' in j and j.get('processing_at') is not None,
-                    })
+                if j.get("status") == "PROCESSING":
+                    pp = j.get("processing_progress") or {}
+                    proc_debug.append(
+                        {
+                            "job_id": j.get("job_id"),
+                            "has_eta": "projected_eta" in pp
+                            and pp.get("projected_eta") is not None,
+                            "has_processing_at": "processing_at" in j
+                            and j.get("processing_at") is not None,
+                        }
+                    )
             if proc_debug:
                 logger.info(f"[Broadcast] PROCESSING jobs debug: {proc_debug}")
         except Exception:
@@ -66,12 +69,12 @@ def broadcast_queue_update():
         queue_status = {
             "jobs": jobs_list,
             "total": len(jobs_list),
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.utcnow().isoformat(),
         }
 
         # Get socketio instance and broadcast
         socketio = get_socketio_instance()
-        socketio.emit('queue_update', queue_status)
+        socketio.emit("queue_update", queue_status)
 
         logger.info(f"Broadcasted queue update: {len(jobs_list)} jobs (Redis)")
 

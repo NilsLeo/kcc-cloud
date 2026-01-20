@@ -28,7 +28,7 @@ def format_bytes(bytes_value):
     if bytes_value == 0:
         return "0 B"
 
-    units = ['B', 'KB', 'MB', 'GB', 'TB']
+    units = ["B", "KB", "MB", "GB", "TB"]
     unit_index = 0
     size = float(bytes_value)
 
@@ -47,7 +47,7 @@ def get_file_extension(filename):
     """Extract file extension from filename (e.g., 'file.epub' -> '.epub')"""
     if not filename:
         return None
-    if '.' not in filename:
+    if "." not in filename:
         return None
     return os.path.splitext(filename)[1].lower()
 
@@ -56,9 +56,7 @@ class ConversionJob(Base):
     __tablename__ = "conversion_jobs"
 
     id = Column(String(36), primary_key=True)  # UUID
-    status = Column(
-        Enum(JobStatus), nullable=False, default=JobStatus.QUEUED
-    )
+    status = Column(Enum(JobStatus), nullable=False, default=JobStatus.QUEUED)
     input_filename = Column(String(255), nullable=False)
     output_filename = Column(String(255))
     input_file_size = Column(BigInteger, nullable=True)  # Input file size in bytes
@@ -81,14 +79,20 @@ class ConversionJob(Base):
 
     device_profile = Column(String(50))
     actual_duration = Column(Integer, nullable=True)  # Actual conversion time in seconds
-    upload_progress_bytes = Column(BigInteger, default=0)  # Real-time upload progress in bytes (0 to input_file_size)
+    upload_progress_bytes = Column(
+        BigInteger, default=0
+    )  # Real-time upload progress in bytes (0 to input_file_size)
 
     # Processing progress tracking (for ETA display)
     processing_started_at = Column(DateTime, nullable=True)  # When processing actually started
-    estimated_duration_seconds = Column(Integer, nullable=True)  # Estimated total duration in seconds
+    estimated_duration_seconds = Column(
+        Integer, nullable=True
+    )  # Estimated total duration in seconds
 
     # Celery task tracking
-    celery_task_id = Column(String(36), nullable=True)  # Celery task ID for the conversion task (revocable)
+    celery_task_id = Column(
+        String(36), nullable=True
+    )  # Celery task ID for the conversion task (revocable)
 
     # Atomized conversion options (previously in JSON 'options' field)
     # Boolean options
@@ -123,7 +127,7 @@ class ConversionJob(Base):
     preserve_margin = Column(Integer, default=0)  # Using Integer for compatibility, can be REAL
 
     # Text options
-    author = Column(String(255), default='KCC')
+    author = Column(String(255), default="KCC")
     title = Column(String(255), nullable=True)
     output_format = Column(String(50), nullable=True)
 
@@ -135,34 +139,34 @@ class ConversionJob(Base):
     def get_options_dict(self):
         """Get conversion options as a dictionary from atomized columns"""
         return {
-            'manga_style': self.manga_style,
-            'hq': self.hq,
-            'two_panel': self.two_panel,
-            'webtoon': self.webtoon,
-            'no_processing': self.no_processing,
-            'upscale': self.upscale,
-            'stretch': self.stretch,
-            'autolevel': self.autolevel,
-            'black_borders': self.black_borders,
-            'white_borders': self.white_borders,
-            'force_color': self.force_color,
-            'force_png': self.force_png,
-            'mozjpeg': self.mozjpeg,
-            'no_kepub': self.no_kepub,
-            'spread_shift': self.spread_shift,
-            'no_rotate': self.no_rotate,
-            'rotate_first': self.rotate_first,
-            'target_size': self.target_size,
-            'splitter': self.splitter,
-            'cropping': self.cropping,
-            'custom_width': self.custom_width,
-            'custom_height': self.custom_height,
-            'gamma': self.gamma,
-            'cropping_power': self.cropping_power,
-            'preserve_margin': self.preserve_margin,
-            'author': self.author,
-            'title': self.title,
-            'output_format': self.output_format,
+            "manga_style": self.manga_style,
+            "hq": self.hq,
+            "two_panel": self.two_panel,
+            "webtoon": self.webtoon,
+            "no_processing": self.no_processing,
+            "upscale": self.upscale,
+            "stretch": self.stretch,
+            "autolevel": self.autolevel,
+            "black_borders": self.black_borders,
+            "white_borders": self.white_borders,
+            "force_color": self.force_color,
+            "force_png": self.force_png,
+            "mozjpeg": self.mozjpeg,
+            "no_kepub": self.no_kepub,
+            "spread_shift": self.spread_shift,
+            "no_rotate": self.no_rotate,
+            "rotate_first": self.rotate_first,
+            "target_size": self.target_size,
+            "splitter": self.splitter,
+            "cropping": self.cropping,
+            "custom_width": self.custom_width,
+            "custom_height": self.custom_height,
+            "gamma": self.gamma,
+            "cropping_power": self.cropping_power,
+            "preserve_margin": self.preserve_margin,
+            "author": self.author,
+            "title": self.title,
+            "output_format": self.output_format,
         }
 
 
@@ -176,7 +180,7 @@ DATABASE_URL = os.getenv(
 engine = create_engine(
     DATABASE_URL,
     echo=False,  # Set to True for SQL debugging
-    connect_args={'check_same_thread': False}  # Needed for SQLite with multiple threads
+    connect_args={"check_same_thread": False},  # Needed for SQLite with multiple threads
 )
 
 SessionLocal = sessionmaker(bind=engine)

@@ -2,6 +2,7 @@
 """
 Database migration script to add ETA tracking columns.
 """
+
 import sqlite3
 import os
 
@@ -19,14 +20,14 @@ try:
     cursor.execute("PRAGMA table_info(conversion_jobs)")
     columns = [col[1] for col in cursor.fetchall()]
 
-    if 'processing_started_at' not in columns:
+    if "processing_started_at" not in columns:
         print("Adding processing_started_at column...")
         cursor.execute("ALTER TABLE conversion_jobs ADD COLUMN processing_started_at DATETIME")
         print("✓ Added processing_started_at column")
     else:
         print("✓ processing_started_at column already exists")
 
-    if 'estimated_duration_seconds' not in columns:
+    if "estimated_duration_seconds" not in columns:
         print("Adding estimated_duration_seconds column...")
         cursor.execute("ALTER TABLE conversion_jobs ADD COLUMN estimated_duration_seconds INTEGER")
         print("✓ Added estimated_duration_seconds column")

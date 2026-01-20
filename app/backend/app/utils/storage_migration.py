@@ -20,7 +20,7 @@ def sanitize_email_for_path(email: str) -> str:
         return None
 
     # Replace @ and other special chars
-    sanitized = email.replace('@', '_at_').replace('+', '_plus_').replace('.', '_')
+    sanitized = email.replace("@", "_at_").replace("+", "_plus_").replace(".", "_")
     return sanitized
 
 
@@ -60,29 +60,26 @@ def migrate_session_storage_paths(session: Session, old_alias: str, user_email: 
     """
     if not session or not old_alias or not user_email:
         return {
-            'success': False,
-            'error': 'Missing required parameters',
-            'jobs_migrated': 0,
-            'objects_moved': 0,
-            'errors': []
+            "success": False,
+            "error": "Missing required parameters",
+            "jobs_migrated": 0,
+            "objects_moved": 0,
+            "errors": [],
         }
 
     s3_storage = S3Storage()
     new_identifier = sanitize_email_for_path(user_email)
 
-    stats = {
-        'success': True,
-        'jobs_migrated': 0,
-        'objects_moved': 0,
-        'errors': []
-    }
+    stats = {"success": True, "jobs_migrated": 0, "objects_moved": 0, "errors": []}
 
     log_with_context(
-        logger, 'info', 'Starting storage path migration',
+        logger,
+        "info",
+        "Starting storage path migration",
         session_key=session.session_key,
         old_alias=old_alias,
         new_identifier=new_identifier,
-        job_count=len(session.conversion_jobs)
+        job_count=len(session.conversion_jobs),
     )
 
     # Migrate each job's storage paths
@@ -98,9 +95,11 @@ def migrate_session_storage_paths(session: Session, old_alias: str, user_email: 
 
             if not objects:
                 log_with_context(
-                    logger, 'debug', 'No objects to migrate for job',
+                    logger,
+                    "debug",
+                    "No objects to migrate for job",
                     job_id=job.id,
-                    old_prefix=old_prefix
+                    old_prefix=old_prefix,
                 )
                 continue
 
@@ -116,42 +115,39 @@ def migrate_session_storage_paths(session: Session, old_alias: str, user_email: 
                     # Delete old location
                     s3_storage.delete_object(obj_key)
 
-                    stats['objects_moved'] += 1
+                    stats["objects_moved"] += 1
 
                     log_with_context(
-                        logger, 'debug', 'Migrated storage object',
+                        logger,
+                        "debug",
+                        "Migrated storage object",
                         job_id=job.id,
                         old_key=obj_key,
-                        new_key=new_key
+                        new_key=new_key,
                     )
 
                 except Exception as obj_error:
                     error_msg = f"Failed to migrate {obj_key}: {str(obj_error)}"
-                    stats['errors'].append(error_msg)
-                    log_with_context(
-                        logger, 'error', error_msg,
-                        job_id=job.id,
-                        old_key=obj_key
-                    )
+                    stats["errors"].append(error_msg)
+                    log_with_context(logger, "error", error_msg, job_id=job.id, old_key=obj_key)
 
-            stats['jobs_migrated'] += 1
+            stats["jobs_migrated"] += 1
 
         except Exception as job_error:
             error_msg = f"Failed to migrate job {job.id}: {str(job_error)}"
-            stats['errors'].append(error_msg)
-            log_with_context(
-                logger, 'error', error_msg,
-                job_id=job.id
-            )
-            stats['success'] = False
+            stats["errors"].append(error_msg)
+            log_with_context(logger, "error", error_msg, job_id=job.id)
+            stats["success"] = False
 
     log_with_context(
-        logger, 'info', 'Storage path migration completed',
+        logger,
+        "info",
+        "Storage path migration completed",
         session_key=session.session_key,
-        jobs_migrated=stats['jobs_migrated'],
-        objects_moved=stats['objects_moved'],
-        errors_count=len(stats['errors']),
-        success=stats['success']
+        jobs_migrated=stats["jobs_migrated"],
+        objects_moved=stats["objects_moved"],
+        errors_count=len(stats["errors"]),
+        success=stats["success"],
     )
 
     return stats
@@ -173,8 +169,10 @@ def migrate_session_storage_async(session_key: str, old_alias: str, user_email: 
                 migrate_session_storage_paths(session, old_alias, user_email)
         except Exception as e:
             log_with_context(
-                logger, 'error', f'Async storage migration failed: {str(e)}',
-                session_key=session_key
+                logger,
+                "error",
+                f"Async storage migration failed: {str(e)}",
+                session_key=session_key,
             )
         finally:
             db.close()
@@ -183,8 +181,10 @@ def migrate_session_storage_async(session_key: str, old_alias: str, user_email: 
     thread.start()
 
     log_with_context(
-        logger, 'info', 'Started async storage path migration',
+        logger,
+        "info",
+        "Started async storage path migration",
         session_key=session_key,
         old_alias=old_alias,
-        new_identifier=sanitize_email_for_path(user_email)
+        new_identifier=sanitize_email_for_path(user_email),
     )

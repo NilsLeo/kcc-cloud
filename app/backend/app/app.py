@@ -1,6 +1,7 @@
 """
 FOSS MangaConverter Flask Application - Simplified version without auth/S3/analytics.
 """
+
 import logging
 import os
 from datetime import datetime
@@ -13,8 +14,7 @@ from utils.socketio_broadcast import broadcast_queue_update as shared_broadcast
 
 # Setup simple logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -23,15 +23,15 @@ app = Flask(__name__)
 
 # Initialize SocketIO for real-time updates
 # Use Redis message queue to share messages with Celery workers
-redis_url = os.getenv('CELERY_BROKER_URL', 'redis://redis:6379/0')
-socketio_cors = os.getenv('SOCKETIO_CORS_ORIGINS', '*')
+redis_url = os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0")
+socketio_cors = os.getenv("SOCKETIO_CORS_ORIGINS", "*")
 socketio = SocketIO(
     app,
     message_queue=redis_url,
     cors_allowed_origins=socketio_cors,
-    async_mode='eventlet',
+    async_mode="eventlet",
     logger=False,
-    engineio_logger=False
+    engineio_logger=False,
 )
 
 app.config["MAX_CONTENT_LENGTH"] = int(
@@ -63,19 +63,19 @@ register_routes(app)
 
 
 # WebSocket event handlers
-@socketio.on('connect')
+@socketio.on("connect")
 def handle_connect():
     """Handle client connection."""
     logger.info(f"Client connected")
 
 
-@socketio.on('disconnect')
+@socketio.on("disconnect")
 def handle_disconnect():
     """Handle client disconnection."""
     logger.info(f"Client disconnected")
 
 
-@socketio.on('subscribe_queue')
+@socketio.on("subscribe_queue")
 def handle_subscribe_queue():
     """Handle subscription to queue updates - send current queue status."""
     logger.info("Client subscribed to queue updates")
@@ -83,7 +83,7 @@ def handle_subscribe_queue():
     shared_broadcast()
 
 
-@socketio.on('request_queue_status')
+@socketio.on("request_queue_status")
 def handle_request_queue_status():
     """Handle manual queue status request."""
     logger.info("Client requested queue status")

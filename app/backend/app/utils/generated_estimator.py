@@ -11,7 +11,23 @@ DO NOT EDIT - Regenerate by running train.py
 """
 
 
-def estimate_processing_time(page_count, input_file_size_mb, file_type_pdf, file_type_cbz, file_type_cbr, upscale, hq, manga_style, mozjpeg, force_color, autolevel, force_png, two_panel, cropping, splitter):
+def estimate_processing_time(
+    page_count,
+    input_file_size_mb,
+    file_type_pdf,
+    file_type_cbz,
+    file_type_cbr,
+    upscale,
+    hq,
+    manga_style,
+    mozjpeg,
+    force_color,
+    autolevel,
+    force_png,
+    two_panel,
+    cropping,
+    splitter,
+):
     """
     Estimate processing time for manga/comic conversion.
 
@@ -110,30 +126,38 @@ def estimate_from_job(job_data):
     import os
 
     # Extract file type
-    filename = job_data.get('filename', job_data.get('original_filename', ''))
-    file_ext = os.path.splitext(filename)[1].lower() if filename else ''
+    filename = job_data.get("filename", job_data.get("original_filename", ""))
+    file_ext = os.path.splitext(filename)[1].lower() if filename else ""
 
     # Convert file size to MB
-    file_size_mb = job_data.get('file_size', 0) / (1024 * 1024)
+    file_size_mb = job_data.get("file_size", 0) / (1024 * 1024)
 
     # Prepare features
     features = {
-        'page_count': job_data.get('page_count', 100),
-        'input_file_size_mb': file_size_mb,
-        'file_type_pdf': 1 if file_ext == '.pdf' else 0,
-        'file_type_cbz': 1 if file_ext == '.cbz' else 0,
-        'file_type_cbr': 1 if file_ext == '.cbr' else 0,
+        "page_count": job_data.get("page_count", 100),
+        "input_file_size_mb": file_size_mb,
+        "file_type_pdf": 1 if file_ext == ".pdf" else 0,
+        "file_type_cbz": 1 if file_ext == ".cbz" else 0,
+        "file_type_cbr": 1 if file_ext == ".cbr" else 0,
     }
 
     # Add boolean options
-    advanced_options = job_data.get('advanced_options', {})
-    for option in ['upscale', 'hq', 'manga_style', 'mozjpeg', 'force_color',
-                   'autolevel', 'force_png', 'two_panel']:
+    advanced_options = job_data.get("advanced_options", {})
+    for option in [
+        "upscale",
+        "hq",
+        "manga_style",
+        "mozjpeg",
+        "force_color",
+        "autolevel",
+        "force_png",
+        "two_panel",
+    ]:
         features[option] = int(advanced_options.get(option, False))
 
     # Add numeric options
-    features['cropping'] = advanced_options.get('cropping', 0)
-    features['splitter'] = advanced_options.get('splitter', 0)
+    features["cropping"] = advanced_options.get("cropping", 0)
+    features["splitter"] = advanced_options.get("splitter", 0)
 
     # Call main estimation function
     duration = estimate_processing_time(**features)
@@ -159,20 +183,16 @@ if __name__ == "__main__":
         force_png=0,
         two_panel=0,
         cropping=0,
-        splitter=0
+        splitter=0,
     )
     print(f"Example 1: {duration:.0f} seconds ({duration/60:.1f} minutes)")
 
     # Example 2: From job dictionary
     job = {
-        'page_count': 204,
-        'file_size': 16 * 1024 * 1024,  # 16 MB
-        'filename': 'attack_on_titan.cbz',
-        'advanced_options': {
-            'upscale': True,
-            'hq': True,
-            'manga_style': True
-        }
+        "page_count": 204,
+        "file_size": 16 * 1024 * 1024,  # 16 MB
+        "filename": "attack_on_titan.cbz",
+        "advanced_options": {"upscale": True, "hq": True, "manga_style": True},
     }
 
     duration = estimate_from_job(job)

@@ -6,7 +6,7 @@
     "build": "next build --webpack",
     "dev": "next dev --webpack",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "format": "prettier --write .",
     "type-check": "tsc --noEmit",
     "test": "vitest"

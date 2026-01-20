@@ -1,4 +1,5 @@
 """Simplified routes for FOSS manga converter - no auth, no S3, local storage only."""
+
 import logging
 import os
 import uuid
@@ -16,14 +17,28 @@ logger = logging.getLogger(__name__)
 
 
 ALLOWED_EXTENSIONS = {
-    'cbz', 'cbr', 'cb7', 'cbt', 'pdf', 'epub', 'zip', 'rar', '7z', 'tar',
-    'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'
+    "cbz",
+    "cbr",
+    "cb7",
+    "cbt",
+    "pdf",
+    "epub",
+    "zip",
+    "rar",
+    "7z",
+    "tar",
+    "jpg",
+    "jpeg",
+    "png",
+    "gif",
+    "bmp",
+    "webp",
 }
 
 
 def allowed_file(filename):
     """Check if file extension is allowed."""
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 def register_routes(app):
@@ -46,18 +61,18 @@ def register_routes(app):
         """
         try:
             # Check if file is present
-            if 'file' not in request.files:
+            if "file" not in request.files:
                 return jsonify({"error": "No file provided"}), 400
 
-            file = request.files['file']
-            if file.filename == '':
+            file = request.files["file"]
+            if file.filename == "":
                 return jsonify({"error": "No file selected"}), 400
 
             if not allowed_file(file.filename):
                 return jsonify({"error": "File type not allowed"}), 400
 
             # Get conversion options
-            device_profile = request.form.get('device_profile', 'KV')
+            device_profile = request.form.get("device_profile", "KV")
             input_filename = secure_filename(file.filename)
             job_id = str(uuid.uuid4())
 
@@ -72,36 +87,48 @@ def register_routes(app):
                     created_at=datetime.utcnow(),
                     uploading_at=datetime.utcnow(),
                     # Boolean options
-                    manga_style=request.form.get('manga_style', 'false').lower() == 'true',
-                    hq=request.form.get('hq', 'false').lower() == 'true',
-                    two_panel=request.form.get('two_panel', 'false').lower() == 'true',
-                    webtoon=request.form.get('webtoon', 'false').lower() == 'true',
-                    no_processing=request.form.get('no_processing', 'false').lower() == 'true',
-                    upscale=request.form.get('upscale', 'false').lower() == 'true',
-                    stretch=request.form.get('stretch', 'false').lower() == 'true',
-                    autolevel=request.form.get('autolevel', 'false').lower() == 'true',
-                    black_borders=request.form.get('black_borders', 'false').lower() == 'true',
-                    white_borders=request.form.get('white_borders', 'false').lower() == 'true',
-                    force_color=request.form.get('force_color', 'false').lower() == 'true',
-                    force_png=request.form.get('force_png', 'false').lower() == 'true',
-                    mozjpeg=request.form.get('mozjpeg', 'false').lower() == 'true',
-                    no_kepub=request.form.get('no_kepub', 'false').lower() == 'true',
-                    spread_shift=request.form.get('spread_shift', 'false').lower() == 'true',
-                    no_rotate=request.form.get('no_rotate', 'false').lower() == 'true',
-                    rotate_first=request.form.get('rotate_first', 'false').lower() == 'true',
+                    manga_style=request.form.get("manga_style", "false").lower() == "true",
+                    hq=request.form.get("hq", "false").lower() == "true",
+                    two_panel=request.form.get("two_panel", "false").lower() == "true",
+                    webtoon=request.form.get("webtoon", "false").lower() == "true",
+                    no_processing=request.form.get("no_processing", "false").lower() == "true",
+                    upscale=request.form.get("upscale", "false").lower() == "true",
+                    stretch=request.form.get("stretch", "false").lower() == "true",
+                    autolevel=request.form.get("autolevel", "false").lower() == "true",
+                    black_borders=request.form.get("black_borders", "false").lower() == "true",
+                    white_borders=request.form.get("white_borders", "false").lower() == "true",
+                    force_color=request.form.get("force_color", "false").lower() == "true",
+                    force_png=request.form.get("force_png", "false").lower() == "true",
+                    mozjpeg=request.form.get("mozjpeg", "false").lower() == "true",
+                    no_kepub=request.form.get("no_kepub", "false").lower() == "true",
+                    spread_shift=request.form.get("spread_shift", "false").lower() == "true",
+                    no_rotate=request.form.get("no_rotate", "false").lower() == "true",
+                    rotate_first=request.form.get("rotate_first", "false").lower() == "true",
                     # Integer options
-                    target_size=int(request.form.get('target_size')) if request.form.get('target_size') else None,
-                    splitter=int(request.form.get('splitter', 0)),
-                    cropping=int(request.form.get('cropping', 0)),
-                    custom_width=int(request.form.get('custom_width')) if request.form.get('custom_width') else None,
-                    custom_height=int(request.form.get('custom_height')) if request.form.get('custom_height') else None,
-                    gamma=int(request.form.get('gamma')) if request.form.get('gamma') else None,
-                    cropping_power=int(request.form.get('cropping_power', 1)),
-                    preserve_margin=int(request.form.get('preserve_margin', 0)),
+                    target_size=(
+                        int(request.form.get("target_size"))
+                        if request.form.get("target_size")
+                        else None
+                    ),
+                    splitter=int(request.form.get("splitter", 0)),
+                    cropping=int(request.form.get("cropping", 0)),
+                    custom_width=(
+                        int(request.form.get("custom_width"))
+                        if request.form.get("custom_width")
+                        else None
+                    ),
+                    custom_height=(
+                        int(request.form.get("custom_height"))
+                        if request.form.get("custom_height")
+                        else None
+                    ),
+                    gamma=int(request.form.get("gamma")) if request.form.get("gamma") else None,
+                    cropping_power=int(request.form.get("cropping_power", 1)),
+                    preserve_margin=int(request.form.get("preserve_margin", 0)),
                     # Text options
-                    author=request.form.get('author', 'KCC'),
-                    title=request.form.get('title', ''),
-                    output_format=request.form.get('output_format', 'EPUB'),
+                    author=request.form.get("author", "KCC"),
+                    title=request.form.get("title", ""),
+                    output_format=request.form.get("output_format", "EPUB"),
                 )
 
                 db.add(job)
@@ -133,11 +160,16 @@ def register_routes(app):
                     # Don't fail the request if broadcast fails
                     print(f"Warning: Could not broadcast queue update: {e}")
 
-                return jsonify({
-                    "job_id": job_id,
-                    "status": job.status.value,
-                    "message": "Job created and queued successfully"
-                }), 201
+                return (
+                    jsonify(
+                        {
+                            "job_id": job_id,
+                            "status": job.status.value,
+                            "message": "Job created and queued successfully",
+                        }
+                    ),
+                    201,
+                )
 
             finally:
                 db.close()
@@ -214,7 +246,7 @@ def register_routes(app):
                 output_path,
                 as_attachment=True,
                 download_name=job.output_filename,
-                mimetype='application/octet-stream'
+                mimetype="application/octet-stream",
             )
 
         finally:
@@ -266,16 +298,22 @@ def register_routes(app):
                 except Exception as e:
                     print(f"Warning: Could not broadcast queue update: {e}")
 
-                return jsonify({
-                    "job_id": job_id,
-                    "status": job.status.value,
-                    "dismissed": True,
-                    "message": "Job dismissed successfully",
-                }), 200
+                return (
+                    jsonify(
+                        {
+                            "job_id": job_id,
+                            "status": job.status.value,
+                            "dismissed": True,
+                            "message": "Job dismissed successfully",
+                        }
+                    ),
+                    200,
+                )
 
             # Otherwise, cancel the active job
             if job.celery_task_id:
                 from celery_config import celery_app
+
                 celery_app.control.revoke(job.celery_task_id, terminate=True)
 
             job.status = JobStatus.CANCELLED
@@ -286,7 +324,9 @@ def register_routes(app):
             # Update Redis for real-time queue
             if RedisJobStore:
                 try:
-                    RedisJobStore.update_job(job_id, {"status": JobStatus.CANCELLED.value, "cancelled_at": now})
+                    RedisJobStore.update_job(
+                        job_id, {"status": JobStatus.CANCELLED.value, "cancelled_at": now}
+                    )
                 except Exception:
                     pass
 
@@ -296,11 +336,16 @@ def register_routes(app):
             except Exception as e:
                 print(f"Warning: Could not broadcast queue update: {e}")
 
-            return jsonify({
-                "job_id": job_id,
-                "status": job.status.value,
-                "message": "Job cancelled successfully",
-            }), 200
+            return (
+                jsonify(
+                    {
+                        "job_id": job_id,
+                        "status": job.status.value,
+                        "message": "Job cancelled successfully",
+                    }
+                ),
+                200,
+            )
 
         finally:
             db.close()
@@ -314,20 +359,26 @@ def register_routes(app):
         db = get_db_session()
         try:
             # Exclude dismissed jobs from the queue
-            jobs = db.query(ConversionJob).filter(
-                ConversionJob.dismissed_at.is_(None)
-            ).order_by(ConversionJob.created_at.desc()).limit(100).all()
+            jobs = (
+                db.query(ConversionJob)
+                .filter(ConversionJob.dismissed_at.is_(None))
+                .order_by(ConversionJob.created_at.desc())
+                .limit(100)
+                .all()
+            )
 
             jobs_list = []
             for job in jobs:
-                jobs_list.append({
-                    "job_id": job.id,
-                    "status": job.status.value,
-                    "input_filename": job.input_filename,
-                    "output_filename": job.output_filename,
-                    "device_profile": job.device_profile,
-                    "created_at": job.created_at.isoformat() if job.created_at else None,
-                })
+                jobs_list.append(
+                    {
+                        "job_id": job.id,
+                        "status": job.status.value,
+                        "input_filename": job.input_filename,
+                        "output_filename": job.output_filename,
+                        "device_profile": job.device_profile,
+                        "created_at": job.created_at.isoformat() if job.created_at else None,
+                    }
+                )
 
             return jsonify({"jobs": jobs_list}), 200
 
@@ -347,9 +398,9 @@ def register_routes(app):
         db = get_db_session()
         try:
             # Get pagination params
-            limit = request.args.get('limit', 100, type=int)
-            offset = request.args.get('offset', 0, type=int)
-            include_dismissed = request.args.get('include_dismissed', 'true').lower() == 'true'
+            limit = request.args.get("limit", 100, type=int)
+            offset = request.args.get("offset", 0, type=int)
+            include_dismissed = request.args.get("include_dismissed", "true").lower() == "true"
 
             # Validate pagination
             if limit > 500:
@@ -358,22 +409,18 @@ def register_routes(app):
                 offset = 0
 
             # Query all COMPLETE jobs
-            query = db.query(ConversionJob).filter(
-                ConversionJob.status == JobStatus.COMPLETE
-            )
+            query = db.query(ConversionJob).filter(ConversionJob.status == JobStatus.COMPLETE)
 
             # Optionally exclude dismissed jobs
             if not include_dismissed:
                 query = query.filter(ConversionJob.dismissed_at.is_(None))
 
-            jobs = query.order_by(
-                ConversionJob.completed_at.desc()
-            ).limit(limit).offset(offset).all()
+            jobs = (
+                query.order_by(ConversionJob.completed_at.desc()).limit(limit).offset(offset).all()
+            )
 
             # Get total count for pagination
-            count_query = db.query(ConversionJob).filter(
-                ConversionJob.status == JobStatus.COMPLETE
-            )
+            count_query = db.query(ConversionJob).filter(ConversionJob.status == JobStatus.COMPLETE)
             if not include_dismissed:
                 count_query = count_query.filter(ConversionJob.dismissed_at.is_(None))
 
@@ -392,16 +439,16 @@ def register_routes(app):
                         continue
 
                     download_data = {
-                        'job_id': job.id,
-                        'original_filename': job.input_filename,
-                        'converted_filename': job.output_filename,
-                        'device_profile': job.device_profile,
-                        'input_file_size': job.input_file_size,
-                        'output_file_size': job.output_file_size,
-                        'completed_at': job.completed_at.isoformat() if job.completed_at else None,
-                        'actual_duration': job.actual_duration,
-                        'download_url': storage.get_download_url(job.id),
-                        'download_attempts': job.download_attempts,
+                        "job_id": job.id,
+                        "original_filename": job.input_filename,
+                        "converted_filename": job.output_filename,
+                        "device_profile": job.device_profile,
+                        "input_file_size": job.input_file_size,
+                        "output_file_size": job.output_file_size,
+                        "completed_at": job.completed_at.isoformat() if job.completed_at else None,
+                        "actual_duration": job.actual_duration,
+                        "download_url": storage.get_download_url(job.id),
+                        "download_attempts": job.download_attempts,
                     }
 
                     downloads_data.append(download_data)
@@ -411,16 +458,23 @@ def register_routes(app):
                     skipped_count += 1
                     continue
 
-            logger.info(f"Downloads fetched: {len(downloads_data)} of {total_count} total ({skipped_count} skipped)")
+            logger.info(
+                f"Downloads fetched: {len(downloads_data)} of {total_count} total ({skipped_count} skipped)"
+            )
 
-            return jsonify({
-                "downloads": downloads_data,
-                "total": total_count,
-                "limit": limit,
-                "offset": offset,
-                "has_more": (offset + len(downloads_data)) < total_count,
-                "timestamp": datetime.utcnow().isoformat()
-            }), 200
+            return (
+                jsonify(
+                    {
+                        "downloads": downloads_data,
+                        "total": total_count,
+                        "limit": limit,
+                        "offset": offset,
+                        "has_more": (offset + len(downloads_data)) < total_count,
+                        "timestamp": datetime.utcnow().isoformat(),
+                    }
+                ),
+                200,
+            )
 
         except Exception as e:
             logger.error(f"Error fetching downloads: {e}")
@@ -446,10 +500,12 @@ def register_routes(app):
 
             # Only allow deletion of completed jobs
             if job.status != JobStatus.COMPLETE:
-                return jsonify({
-                    "error": "Can only delete completed jobs",
-                    "status": job.status.value
-                }), 400
+                return (
+                    jsonify(
+                        {"error": "Can only delete completed jobs", "status": job.status.value}
+                    ),
+                    400,
+                )
 
             # Delete files from filesystem
             try:
@@ -465,10 +521,7 @@ def register_routes(app):
 
             logger.info(f"Successfully deleted job {job_id} from database and filesystem")
 
-            return jsonify({
-                "message": "Download deleted successfully",
-                "job_id": job_id
-            }), 200
+            return jsonify({"message": "Download deleted successfully", "job_id": job_id}), 200
 
         except Exception as e:
             logger.error(f"Error deleting download {job_id}: {e}")

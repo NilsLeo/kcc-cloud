@@ -14,7 +14,7 @@ class TestConversionJob:
             id="test-job-123",
             status=JobStatus.QUEUED,
             input_filename="test.cbz",
-            device_profile="KV"
+            device_profile="KV",
         )
 
         assert job.id == "test-job-123"
@@ -24,20 +24,13 @@ class TestConversionJob:
 
     def test_job_default_status(self):
         """Test that default status is QUEUED."""
-        job = ConversionJob(
-            id="test-job-456",
-            input_filename="test.pdf"
-        )
+        job = ConversionJob(id="test-job-456", input_filename="test.pdf")
 
         assert job.status == JobStatus.QUEUED
 
     def test_job_status_transitions(self):
         """Test job status can be updated."""
-        job = ConversionJob(
-            id="test-job-789",
-            status=JobStatus.QUEUED,
-            input_filename="test.epub"
-        )
+        job = ConversionJob(id="test-job-789", status=JobStatus.QUEUED, input_filename="test.epub")
 
         # Transition to PROCESSING
         job.status = JobStatus.PROCESSING
@@ -50,9 +43,7 @@ class TestConversionJob:
     def test_job_timestamps(self):
         """Test that timestamps can be set."""
         job = ConversionJob(
-            id="test-job-timestamps",
-            input_filename="test.cbz",
-            status=JobStatus.QUEUED
+            id="test-job-timestamps", input_filename="test.cbz", status=JobStatus.QUEUED
         )
 
         now = datetime.utcnow()
@@ -70,7 +61,7 @@ class TestConversionJob:
             id="test-job-sizes",
             input_filename="test.cbz",
             input_file_size=1024000,
-            output_file_size=512000
+            output_file_size=512000,
         )
 
         assert job.input_file_size == 1024000
@@ -82,7 +73,7 @@ class TestConversionJob:
             id="test-job-error",
             input_filename="test.cbz",
             status=JobStatus.ERRORED,
-            error_message="Test error message"
+            error_message="Test error message",
         )
 
         assert job.status == JobStatus.ERRORED

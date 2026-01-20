@@ -8,18 +8,16 @@ checking file extensions and rejecting unsupported formats.
 import os
 from typing import Tuple
 
-
 # Supported file formats
 SUPPORTED_FORMATS = {
     # Direct conversion formats (no extraction needed)
-    'direct': ['.pdf', '.epub'],
-
+    "direct": [".pdf", ".epub"],
     # Archive formats (need extraction)
-    'archive': ['.zip', '.cbz', '.rar', '.cbr', '.7z', '.cb7']
+    "archive": [".zip", ".cbz", ".rar", ".cbr", ".7z", ".cb7"],
 }
 
 # Flattened list of all supported extensions
-ALL_SUPPORTED_EXTENSIONS = SUPPORTED_FORMATS['direct'] + SUPPORTED_FORMATS['archive']
+ALL_SUPPORTED_EXTENSIONS = SUPPORTED_FORMATS["direct"] + SUPPORTED_FORMATS["archive"]
 
 
 class UnsupportedFileFormatError(Exception):
@@ -30,7 +28,9 @@ class UnsupportedFileFormatError(Exception):
         self.extension = extension
 
         if extension is None:
-            message = f"File '{filename}' has no extension. Please provide a file with a valid extension."
+            message = (
+                f"File '{filename}' has no extension. Please provide a file with a valid extension."
+            )
         else:
             message = (
                 f"File format '{extension}' is not supported. "
@@ -52,7 +52,7 @@ def get_file_extension(filename: str) -> str:
         The lowercase file extension (including the dot), or empty string if none
     """
     if not filename:
-        return ''
+        return ""
 
     _, ext = os.path.splitext(filename)
     return ext.lower()
@@ -72,7 +72,7 @@ def validate_file_extension(filename: str) -> Tuple[bool, str]:
         UnsupportedFileFormatError: If the file has no extension or an unsupported extension
     """
     if not filename:
-        raise UnsupportedFileFormatError(filename or 'unnamed file', None)
+        raise UnsupportedFileFormatError(filename or "unnamed file", None)
 
     extension = get_file_extension(filename)
 
@@ -121,4 +121,4 @@ def get_supported_formats_string() -> str:
     Returns:
         Comma-separated string of supported extensions
     """
-    return ', '.join(ALL_SUPPORTED_EXTENSIONS)
+    return ", ".join(ALL_SUPPORTED_EXTENSIONS)
