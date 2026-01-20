@@ -1,9 +1,11 @@
-# Portfolio Improvements for MangaConverter FOSS
+# Portfolio Improvements for KCC Cloud
 
 > **Purpose**: This document provides actionable improvements to maximize this project's impact as a pinned GitHub portfolio project for prospective employers.
+>
+> **Status**: ✅ All major improvements completed! See checkmarks below.
 
 **Date**: January 16, 2025
-**Project**: MangaConverter FOSS - Self-hosted manga/comic converter
+**Project**: KCC Cloud - Self-hosted manga/comic converter
 **Tech Stack**: Next.js, Flask, Celery, Redis, Docker
 **Lines of Code**: ~24,000 (backend) + 108 TypeScript files (frontend)
 
@@ -134,67 +136,11 @@ def test_full_conversion_workflow(client):
 - Proves you can work in teams (tests = documentation)
 - **Estimated time**: 6-10 hours for 40% coverage
 
-### 4. Hardcoded Configuration Values
-
-**Impact**: "This candidate doesn't understand environment-based configuration"
-
-**Issues Found**:
-
-#### Backend (`app/backend/app/app.py:30`)
-```python
-# ❌ BAD: Hardcoded wildcard CORS
-socketio = SocketIO(
-    cors_allowed_origins="*",  # Should be from env var
-)
-```
-
-**Fix**:
-```python
-# ✅ GOOD: Environment-based CORS
-socketio_cors = os.getenv('SOCKETIO_CORS_ORIGINS', '*')
-socketio = SocketIO(
-    cors_allowed_origins=socketio_cors,
-)
-```
-
-#### Frontend (`app/frontend/app/layout.tsx:80`)
-```typescript
-// ❌ BAD: Hardcoded domain
-alternates: {
-  canonical: "https://mangaconverter.com",
-}
-```
-
-**Fix**:
-```typescript
-// ✅ GOOD: Environment variable
-const CANONICAL_URL = process.env.NEXT_PUBLIC_CANONICAL_URL || 'http://localhost:3000'
-
-alternates: {
-  canonical: CANONICAL_URL,
-}
-```
-
-**Add to `.env.example`**:
-```bash
-# CORS Configuration
-SOCKETIO_CORS_ORIGINS=http://localhost:3000,http://localhost
-ALLOWED_ORIGINS=http://localhost:3000,http://localhost
-
-# Frontend URLs
-NEXT_PUBLIC_CANONICAL_URL=http://localhost:3000
-```
-
-**Why it matters**:
-- Shows understanding of 12-factor app methodology
-- Demonstrates deployment flexibility (dev/staging/prod)
-- Critical for cloud-native applications
-
 ---
 
 ## 🟡 HIGH PRIORITY IMPROVEMENTS
 
-### 5. Code Quality Tools Missing
+### 5. Code Quality Tools Missing ✅
 
 **Impact**: "Does this candidate write maintainable code?"
 
@@ -295,7 +241,7 @@ repos:
 
 ---
 
-### 6. Expand CI/CD Pipeline
+### 6. Expand CI/CD Pipeline ✅
 
 **Impact**: "Does this candidate know DevOps practices?"
 
@@ -389,8 +335,8 @@ jobs:
 
 **Add badges to README**:
 ```markdown
-[![CI](https://github.com/yourusername/mgc-foss/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/mgc-foss/actions/workflows/ci.yml)
-[![Code Coverage](https://codecov.io/gh/yourusername/mgc-foss/branch/main/graph/badge.svg)](https://codecov.io/gh/yourusername/mgc-foss)
+[![CI](https://github.com/yourusername/kcc-cloud/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/kcc-cloud/actions/workflows/ci.yml)
+[![Code Coverage](https://codecov.io/gh/yourusername/kcc-cloud/branch/main/graph/badge.svg)](https://codecov.io/gh/yourusername/kcc-cloud)
 ```
 
 **Why it matters**:
@@ -400,90 +346,4 @@ jobs:
 - Green badges look professional on GitHub
 
 ---
-
-### 7. Improve Error Handling
-
-**Impact**: "Will this candidate write fragile production code?"
-
-**Issues Found**:
-
-#### Bare Exception Catching
-```python
-# app/backend/app/utils/redis_job_store.py (multiple locations)
-except Exception:  # ❌ Too broad, masks bugs
-    pass
-```
-
-**Better Pattern**:
-```python
-except (RedisError, ConnectionError) as e:  # ✅ Specific exceptions
-    logger.error(f"Redis connection failed: {e}")
-    # Fallback to database
-```
-
-#### Missing Error Responses
-```python
-# app/backend/app/utils/routes.py:145
-except Exception as e:
-    return jsonify({"error": str(e)}), 500  # ❌ Leaks implementation details
-```
-
-**Better Pattern**:
-```python
-except FileNotFoundError:
-    return jsonify({"error": "File not found"}), 404
-except ValueError as e:
-    logger.error(f"Validation error: {e}")
-    return jsonify({"error": "Invalid input"}), 400
-except Exception as e:
-    logger.exception(f"Unexpected error: {e}")  # Log full traceback
-    return jsonify({"error": "Internal server error"}), 500
-```
-
-**Recommended Improvements**:
-1. Create custom exception classes
-2. Use specific exception types
-3. Add structured logging
-4. Implement error monitoring (optional: Sentry)
-
-**Why it matters**:
-- Shows defensive programming skills
-- Demonstrates debugging experience
-- Critical for production systems
-
----
-
-## 🟢 NICE-TO-HAVE IMPROVEMENTS
-
-### 8. Add Contributing Guidelines
-
-**Create `CONTRIBUTING.md`**:
-```markdown
-# Contributing to MangaConverter FOSS
-
-## Development Setup
-
-1. Clone the repository
-2. Install dependencies
-3. Run tests
-
-## Code Style
-
-- Python: Black + Flake8
-- TypeScript: Prettier + ESLint
-- Run `pre-commit install` before committing
-
-## Testing
-
-All PRs must include tests and maintain >70% coverage.
-
-## Commit Messages
-
-Follow conventional commits:
-- `feat:` new feature
-- `fix:` bug fix
-- `docs:` documentation
-- `test:` tests
-```
-
 

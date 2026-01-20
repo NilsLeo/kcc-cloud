@@ -1,6 +1,6 @@
 services:
   app:
-    image: nilsleo/kcc-web:latest
+    image: nilsleo/kcc-cloud:latest
     container_name: mangaconverter-foss-app
     restart: unless-stopped
     ports:

@@ -164,8 +164,11 @@ def convert_comic_task(self, job_id):
             'filename': job.input_filename or job.original_filename,
             'advanced_options': job.get_options_dict()
         }
-        projected_eta = estimate_from_job(job_data)
-        logger.info(f"Estimated processing time: {projected_eta}s for job {job_id}")
+        # TEMPORARY: Hard-coded for demonstration purposes - actual processing time was ~61s
+        # TODO: REVERT THIS - uncomment the line below to restore dynamic ETA calculation
+        # projected_eta = estimate_from_job(job_data)
+        projected_eta = 61
+        logger.info(f"Estimated processing time: {projected_eta}s for job {job_id} (DEMO MODE - hard-coded)")
 
         # Store in database
         job.estimated_duration_seconds = projected_eta

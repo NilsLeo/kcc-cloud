@@ -56,7 +56,7 @@ services:
       - ALLOWED_ORIGINS=http://localhost:3000,http://localhost
       - FLASK_ENV=${FLASK_ENV:-production}
       - FLASK_DEBUG=${FLASK_DEBUG:-0}
-      - GUNICORN_WORKERS=${GUNICORN_WORKERS:-4}
+      
       - GUNICORN_TIMEOUT=${GUNICORN_TIMEOUT:-600}
       - GUNICORN_GRACEFUL_TIMEOUT=${GUNICORN_GRACEFUL_TIMEOUT:-600}
       - CELERY_BROKER_URL=redis://redis:6379/0
@@ -92,7 +92,7 @@ services:
       "celery", "-A", "celery_config.celery_app", "worker",
       "--loglevel=info",
       "-P", "prefork",
-      "-c", "${CELERY_CONCURRENCY:-2}",
+      "-c", "${CELERY_CONCURRENCY:-3}",
       "-Q", "conversion",
       "-E"
     ]

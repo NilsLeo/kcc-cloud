@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          cd app/backend
+          pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Run Black
+        run: cd app/backend && black --check .
+
+      - name: Run Flake8
+        run: cd app/backend && flake8 .
+
+      - name: Run tests
+        run: cd app/backend && pytest --cov=app --cov-report=xml
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./app/backend/coverage.xml
+
+  frontend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: cd app/frontend && pnpm install
+
+      - name: Run linter
+        run: cd app/frontend && pnpm lint
+
+      - name: Type check
+        run: cd app/frontend && pnpm type-check
+
+      - name: Run tests
+        run: cd app/frontend && pnpm test
+
+      - name: Build
+        run: cd app/frontend && pnpm build
+
+  docker-build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test Docker Compose
+        run: docker compose -f docker-compose.yml config

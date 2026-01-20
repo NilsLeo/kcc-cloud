@@ -1280,10 +1280,10 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
             </button>
           </div>
 
-          {/* Animated Title */}
-          <h1 className="text-5xl font-bold text-center mt-8 tracking-tight font-bungee uppercase">
-            {isComic ? "COMIC CONVERTER" : "MANGA CONVERTER"}
-          </h1>
+{/* Animated Title */}
+              <h1 className="text-5xl font-bold text-center mt-8 tracking-tight font-poppins">
+                {isComic ? "Comic Converter" : "Manga Converter"}
+              </h1>
           <p className="text-lg text-muted-foreground">
             Convert your {isComic ? "comic" : "manga"} files to e-reader formats
           </p>

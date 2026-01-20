@@ -6,7 +6,10 @@
     "build": "next build --webpack",
     "dev": "next dev --webpack",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "next lint",
+    "format": "prettier --write .",
+    "type-check": "tsc --noEmit",
+    "test": "vitest"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -64,14 +67,21 @@
     "zod": "3.25.76"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.1.4",
+    "@testing-library/react": "^14.0.0",
     "@types/node": "^22",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "@types/uuid": "^10.0.0",
+    "@vitejs/plugin-react": "^4.2.0",
+    "eslint-config-prettier": "^9.1.0",
+    "jsdom": "^23.0.0",
     "postcss": "^8.5",
+    "prettier": "^3.1.0",
     "tailwindcss": "^3.4.18",
     "tw-animate-css": "1.3.3",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^1.0.0"
   },
   "optionalDependencies": {
     "@next/swc-linux-arm64-gnu": "16.0.10",

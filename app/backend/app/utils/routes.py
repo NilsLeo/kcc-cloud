@@ -142,8 +142,15 @@ def register_routes(app):
             finally:
                 db.close()
 
+        except ValueError as e:
+            logger.error(f"Validation error during job creation: {e}")
+            return jsonify({"error": "Invalid input parameters"}), 400
+        except IOError as e:
+            logger.error(f"File operation error during job creation: {e}")
+            return jsonify({"error": "Failed to process uploaded file"}), 500
         except Exception as e:
-            return jsonify({"error": str(e)}), 500
+            logger.exception(f"Unexpected error during job creation: {e}")
+            return jsonify({"error": "Internal server error"}), 500
 
     @app.route("/status/<job_id>", methods=["GET"])
     def get_job_status(job_id):
@@ -418,6 +425,55 @@ def register_routes(app):
         except Exception as e:
             logger.error(f"Error fetching downloads: {e}")
             return jsonify({"error": "Failed to fetch downloads"}), 500
+        finally:
+            db.close()
+
+    @app.route("/downloads/<job_id>", methods=["DELETE"])
+    def delete_download(job_id):
+        """
+        Delete a completed download from both database and filesystem.
+
+        This will:
+        - Remove the job record from the database
+        - Delete input and output files from filesystem
+        """
+        db = get_db_session()
+        try:
+            job = db.query(ConversionJob).filter_by(id=job_id).first()
+
+            if not job:
+                return jsonify({"error": "Job not found"}), 404
+
+            # Only allow deletion of completed jobs
+            if job.status != JobStatus.COMPLETE:
+                return jsonify({
+                    "error": "Can only delete completed jobs",
+                    "status": job.status.value
+                }), 400
+
+            # Delete files from filesystem
+            try:
+                storage.delete_job_files(job_id)
+                logger.info(f"Deleted files for job {job_id}")
+            except Exception as e:
+                logger.warning(f"Failed to delete files for job {job_id}: {e}")
+                # Continue with database deletion even if file deletion fails
+
+            # Delete from database
+            db.delete(job)
+            db.commit()
+
+            logger.info(f"Successfully deleted job {job_id} from database and filesystem")
+
+            return jsonify({
+                "message": "Download deleted successfully",
+                "job_id": job_id
+            }), 200
+
+        except Exception as e:
+            logger.error(f"Error deleting download {job_id}: {e}")
+            db.rollback()
+            return jsonify({"error": "Failed to delete download"}), 500
         finally:
             db.close()
 

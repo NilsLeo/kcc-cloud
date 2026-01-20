@@ -448,8 +448,8 @@ export function FileConversionCard({
                       <Check className={`h-3 w-3 ${isComplete ? statusColors.text : "text-muted-foreground/50"}`} />
                     )}
                     {/* Progress bar for mobile */}
-                    <div className="flex items-center gap-1 ml-1">
-                      <div className="relative h-1.5 w-16 overflow-hidden rounded-full bg-muted">
+                    <div className="flex items-center gap-1 ml-1 shrink-0">
+                      <div className="relative h-1.5 w-12 overflow-hidden rounded-full bg-muted shrink-0">
                         {/* Upload layer (lighter purple) underneath */}
                         <div
                           className="absolute left-0 top-0 h-full bg-[hsl(var(--theme-lightest))] transition-all duration-300"
@@ -463,7 +463,7 @@ export function FileConversionCard({
                           style={{ width: `${processingProgress}%` }}
                         />
                       </div>
-                      <span className="text-xs font-medium text-muted-foreground tabular-nums">
+                      <span className="text-xs font-medium text-muted-foreground tabular-nums w-9 text-right shrink-0">
                         {Math.round(progressPercentage)}%
                       </span>
                     </div>

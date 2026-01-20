@@ -24,10 +24,11 @@ app = Flask(__name__)
 # Initialize SocketIO for real-time updates
 # Use Redis message queue to share messages with Celery workers
 redis_url = os.getenv('CELERY_BROKER_URL', 'redis://redis:6379/0')
+socketio_cors = os.getenv('SOCKETIO_CORS_ORIGINS', '*')
 socketio = SocketIO(
     app,
     message_queue=redis_url,
-    cors_allowed_origins="*",
+    cors_allowed_origins=socketio_cors,
     async_mode='eventlet',
     logger=False,
     engineio_logger=False

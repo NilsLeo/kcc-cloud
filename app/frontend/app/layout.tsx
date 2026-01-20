@@ -10,6 +10,8 @@ import { ErrorBoundary } from "@/components/error-boundary"
 // Avoid network fetches for Google Fonts in dev containers by relying on local fonts
 // If you need Google fonts, switch back to next/font/google and ensure outbound network is available
 
+const CANONICAL_URL = process.env.NEXT_PUBLIC_CANONICAL_URL || 'http://localhost:3000'
+
 const zenMaruGothic = localFont({
   src: [
     {
@@ -29,6 +31,24 @@ const zenMaruGothic = localFont({
     },
   ],
   variable: "--font-zen-maru-gothic",
+  display: "swap",
+  preload: false,
+})
+
+const poppins = localFont({
+  src: [
+    {
+      path: "../fonts/Poppins-Regular.ttf",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../fonts/Poppins-SemiBold.ttf",
+      weight: "600",
+      style: "normal",
+    },
+  ],
+  variable: "--font-poppins",
   display: "swap",
   preload: false,
 })
@@ -62,9 +82,9 @@ export const metadata: Metadata = {
     follow: true,
   },
   alternates: {
-    canonical: "https://mangaconverter.com",
+    canonical: CANONICAL_URL,
     languages: {
-      "en-US": "https://mangaconverter.com",
+      "en-US": CANONICAL_URL,
     },
   },
   generator: "v0.dev",
@@ -98,7 +118,7 @@ export default function RootLayout({
           <meta name="msapplication-tap-highlight" content="no" />
           <meta name="theme-color" content="hsl(var(--theme-medium))" />
         </head>
-        <body className={`${zenMaruGothic.variable} antialiased`}>
+        <body className={`${zenMaruGothic.variable} ${poppins.variable} antialiased`}>
           <ErrorBoundary>
             <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
               <ConverterModeProvider>

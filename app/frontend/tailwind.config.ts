@@ -23,6 +23,7 @@ const config = {
         bungee: ["var(--font-mplus)", "sans-serif"],
         "kosugi-maru": ["var(--font-kosugi-maru)", "sans-serif"],
         "zen-maru": ["var(--font-zen-maru-gothic)", "sans-serif"],
+        poppins: ["var(--font-poppins)", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",

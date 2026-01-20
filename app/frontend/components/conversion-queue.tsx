@@ -164,17 +164,17 @@ export function ConversionQueue({
         lastLoggedRemainingSecRef.current = null
         lastLoggedPercentRef.current = null
 
-        // Debug: log initialization values
-        log("[UI] Init processing ticker", {
-          job_id: processingJobIdRef.current,
-          processing_at: processingFile.processing_at,
-          eta_at: hasEtaAt ? etaAt : null,
-          projected_eta: hasEtaSec ? pp.projected_eta : null,
-          total_seconds: hasEtaAt ? Math.max(1, (new Date(etaAt as string).getTime() - processingAtMs) / 1000) : pp.projected_eta,
-          elapsed_seconds: Math.floor(elapsedSec),
-          initial_progress: initialProgress,
-          initial_remaining: initialRemaining,
-        })
+        // Debug: log initialization values (commented out to reduce noise)
+        // log("[UI] Init processing ticker", {
+        //   job_id: processingJobIdRef.current,
+        //   processing_at: processingFile.processing_at,
+        //   eta_at: hasEtaAt ? etaAt : null,
+        //   projected_eta: hasEtaSec ? pp.projected_eta : null,
+        //   total_seconds: hasEtaAt ? Math.max(1, (new Date(etaAt as string).getTime() - processingAtMs) / 1000) : pp.projected_eta,
+        //   elapsed_seconds: Math.floor(elapsedSec),
+        //   initial_progress: initialProgress,
+        //   initial_remaining: initialRemaining,
+        // })
       }
     } else {
       setProcessingStartTime(null)
@@ -197,34 +197,34 @@ export function ConversionQueue({
         const next = Math.max(0, Math.min(99, progress))
         setClientProcessingProgress((prev) => {
           const value = Math.max(prev, next)
-          // Log on every 10% boundary crossed (10,20,...,90)
+          // Progress tracking (logging disabled to reduce noise)
           const currentTenth = Math.floor(value / 10) * 10
           const lastTenth = lastLoggedProcessingTenthRef.current ?? -1
           if (value > 0 && currentTenth !== lastTenth && currentTenth >= 10 && currentTenth <= 90) {
             lastLoggedProcessingTenthRef.current = currentTenth
-            const jobId = processingJobIdRef.current
-            const remaining = displayedRemainingSec ?? Math.max(0, Math.ceil(processingEtaSec - elapsed))
-            log(`[UI] Converting progress (ticker): ${currentTenth}%`, {
-              progress_percent: currentTenth,
-              elapsed_seconds: Math.floor(elapsed),
-              remaining_seconds: Math.floor(remaining),
-              projected_eta: processingEtaSec,
-              job_id: jobId,
-            })
+            // const jobId = processingJobIdRef.current
+            // const remaining = displayedRemainingSec ?? Math.max(0, Math.ceil(processingEtaSec - elapsed))
+            // log(`[UI] Converting progress (ticker): ${currentTenth}%`, {
+            //   progress_percent: currentTenth,
+            //   elapsed_seconds: Math.floor(elapsed),
+            //   remaining_seconds: Math.floor(remaining),
+            //   projected_eta: processingEtaSec,
+            //   job_id: jobId,
+            // })
           }
-          // Log each 1% change for detailed tracing
+          // Track 1% changes (logging disabled)
           const currentPercent = Math.floor(value)
           const lastPercent = lastLoggedPercentRef.current ?? -1
           if (currentPercent !== lastPercent) {
             lastLoggedPercentRef.current = currentPercent
-            const jobId = processingJobIdRef.current
-            const remaining = displayedRemainingSec ?? Math.max(0, Math.ceil(processingEtaSec - elapsed))
-            log(`[UI] Ticker percent: ${currentPercent}%`, {
-              job_id: jobId,
-              elapsed_seconds: Math.floor(elapsed),
-              remaining_seconds: Math.floor(remaining),
-              total_seconds: processingEtaSec,
-            })
+            // const jobId = processingJobIdRef.current
+            // const remaining = displayedRemainingSec ?? Math.max(0, Math.ceil(processingEtaSec - elapsed))
+            // log(`[UI] Ticker percent: ${currentPercent}%`, {
+            //   job_id: jobId,
+            //   elapsed_seconds: Math.floor(elapsed),
+            //   remaining_seconds: Math.floor(remaining),
+            //   total_seconds: processingEtaSec,
+            // })
           }
           return value
         })
@@ -240,15 +240,15 @@ export function ConversionQueue({
         setDisplayedRemainingSec((prev) => {
           if (prev == null) return prev
           const next = Math.max(0, prev - 1)
-          // Log each second decremented
+          // Track each second (logging disabled to reduce noise)
           const last = lastLoggedRemainingSecRef.current
           if (last == null || next !== last) {
             lastLoggedRemainingSecRef.current = next
-            const jobId = processingJobIdRef.current
-            log(`[UI] ETA tick: ${next}s remaining`, {
-              remaining_seconds: next,
-              job_id: jobId,
-            })
+            // const jobId = processingJobIdRef.current
+            // log(`[UI] ETA tick: ${next}s remaining`, {
+            //   remaining_seconds: next,
+            //   job_id: jobId,
+            // })
           }
           return next
         })
@@ -384,14 +384,14 @@ export function ConversionQueue({
         setDisplayedUploadRemainingSec((prev) => {
           if (prev == null) return prev
           const next = Math.max(0, prev - 1)
-          // Log each decrement
+          // Log each decrement (logging disabled to reduce noise)
           if (lastLoggedUploadRemainingRef.current == null || next !== lastLoggedUploadRemainingRef.current) {
             lastLoggedUploadRemainingRef.current = next
-            const jobId = uploadJobIdRef.current // Use global ref for now
-            log(`[UI] Upload ETA tick: ${next}s remaining`, {
-              remaining_seconds: next,
-              job_id: jobId,
-            })
+            // const jobId = uploadJobIdRef.current // Use global ref for now
+            // log(`[UI] Upload ETA tick: ${next}s remaining`, {
+            //   remaining_seconds: next,
+            //   job_id: jobId,
+            // })
           }
           return next
         })
