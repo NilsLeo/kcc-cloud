@@ -1,3 +1,9 @@
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
 let userConfig = undefined
 try {
   userConfig = await import('./v0-user-next.config')
@@ -25,6 +31,10 @@ const nextConfig = {
       // Fix for "self is not defined" error in middleware
       config.output.globalObject = 'globalThis'
     }
+
+    // Add path aliases for @/ imports
+    config.resolve.alias['@'] = path.resolve(__dirname)
+
     return config
   },
 }
