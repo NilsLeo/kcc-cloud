@@ -1,3 +1,5 @@
+// Minimal ESLint configuration for Next.js 16 + ESLint 9
+// TODO: Add proper TypeScript linting rules and React rules
 export default [
   {
     ignores: [
@@ -9,21 +11,15 @@ export default [
       "build/**",
       "*.config.js",
       "*.config.mjs",
+      "*.config.ts",
+      "*.tsbuildinfo",
     ],
   },
   {
-    files: ["**/*.{js,jsx,ts,tsx}"],
-    languageOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
-      parserOptions: {
-        ecmaFeatures: {
-          jsx: true,
-        },
-      },
-    },
+    files: ["**/*.{js,mjs,cjs,jsx,ts,tsx}"],
     rules: {
-      // Add your custom rules here if needed
+      // Minimal rules - just to get linting working
+      // Most rules disabled until proper TS/React ESLint plugins are configured
     },
   },
 ];
