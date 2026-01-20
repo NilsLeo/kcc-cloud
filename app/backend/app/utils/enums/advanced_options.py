@@ -340,9 +340,9 @@ def validate_advanced_options(options: Dict[str, Any], device_profile: str) -> D
             if option.key == "output_format":
                 # For output format, "Auto" is not acceptable for OTHER profile
                 if not value or value == "Auto":
-                    errors[option.key] = (
-                        f"{option.description} must be specified (not 'Auto') when using 'Other' profile"
-                    )
+                    errors[
+                        option.key
+                    ] = f"{option.description} must be specified (not 'Auto') when using 'Other' profile"
             elif not value:
                 errors[option.key] = f"{option.description} is required when using 'Other' profile"
 
@@ -363,9 +363,9 @@ def validate_advanced_options(options: Dict[str, Any], device_profile: str) -> D
             try:
                 num_value = float(value)
                 if num_value <= 0:
-                    errors[dimension_option.key] = (
-                        f"{dimension_option.description} must be greater than 0"
-                    )
+                    errors[
+                        dimension_option.key
+                    ] = f"{dimension_option.description} must be greater than 0"
             except (ValueError, TypeError):
                 pass  # Already handled above
 
