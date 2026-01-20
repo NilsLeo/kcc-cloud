@@ -142,7 +142,7 @@ While KCC's desktop GUI is fantastic, this web-based alternative offers compelli
 
 ## 🏗️ Architecture
 
-![System architecture diagram](docs/images/architecture-diagram.png)
+![System architecture diagram](docs/images/system-architecture.svg)
 
 High-level overview showing: Browser → Next.js Frontend (Port 3000) → Flask Backend API (Port 8060) → Redis Message Broker → Celery Worker Pool → KCC Conversion Engine → SQLite Database + Local Storage
 
