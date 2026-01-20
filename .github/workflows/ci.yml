@@ -58,9 +58,8 @@ jobs:
       - name: Install dependencies
         run: cd app/frontend && pnpm install
 
-      # TODO: Re-enable after configuring @typescript-eslint/parser
-      # - name: Run linter
-      #   run: cd app/frontend && pnpm lint
+      - name: Run linter
+        run: cd app/frontend && pnpm lint
 
       # TODO: Re-enable after fixing TypeScript type errors
       # - name: Type check
