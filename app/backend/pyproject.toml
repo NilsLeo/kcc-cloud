@@ -15,4 +15,5 @@ disallow_untyped_defs = false  # Start lenient
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = "test_*.py"
+pythonpath = ["app"]
 addopts = "--cov=app --cov-report=html --cov-report=term"
