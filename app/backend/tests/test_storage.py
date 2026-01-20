@@ -6,7 +6,6 @@ import pytest
 class TestLocalStorage:
     """Test local storage functionality."""
 
-
     def test_upload_path_construction(self):
         """Test that upload paths are constructed correctly."""
         # This would test the path construction logic

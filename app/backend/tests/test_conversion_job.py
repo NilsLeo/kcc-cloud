@@ -21,7 +21,6 @@ class TestConversionJob:
         assert job.input_filename == "test.cbz"
         assert job.device_profile == "KV"
 
-
     def test_job_status_transitions(self):
         """Test job status can be updated."""
         job = ConversionJob(id="test-job-789", status=JobStatus.QUEUED, input_filename="test.epub")
