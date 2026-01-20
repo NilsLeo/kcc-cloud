@@ -1,6 +1,7 @@
-// ESLint 9 flat config for Next.js 16 + TypeScript
-// TODO: Properly configure @typescript-eslint/parser and React plugins
-export default [
+import js from "@eslint/js";
+import tseslint from "typescript-eslint";
+
+export default tseslint.config(
   {
     ignores: [
       ".next/**",
@@ -13,14 +14,18 @@ export default [
       "*.config.mjs",
       "*.config.ts",
       "*.tsbuildinfo",
-      // Temporarily ignore all source files until parser is configured
-      "**/*.ts",
-      "**/*.tsx",
-      "**/*.jsx",
     ],
   },
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
   {
-    files: ["**/*.js", "**/*.mjs", "**/*.cjs"],
-    rules: {},
-  },
-];
+    rules: {
+      "@typescript-eslint/no-unused-vars": "warn",
+      "@typescript-eslint/no-explicit-any": "warn",
+      "no-empty": "warn",
+      "no-case-declarations": "warn",
+      "no-prototype-builtins": "warn",
+      "prefer-const": "warn",
+    },
+  }
+);
