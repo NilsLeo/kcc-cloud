@@ -61,6 +61,9 @@ jobs:
       - name: Run linter
         run: cd app/frontend && pnpm lint
 
+      - name: Build
+        run: cd app/frontend && pnpm build
+
       # TODO: Re-enable after fixing TypeScript type errors
       # - name: Type check
       #   run: cd app/frontend && pnpm type-check
@@ -68,10 +71,6 @@ jobs:
       # TODO: Re-enable after fixing test errors
       # - name: Run tests
       #   run: cd app/frontend && pnpm test
-
-      # TODO: Re-enable after fixing missing lib modules (@/lib/utils, etc.)
-      # - name: Build
-      #   run: cd app/frontend && pnpm build
 
   docker-build-test:
     runs-on: ubuntu-latest
