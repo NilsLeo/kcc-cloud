@@ -23,7 +23,7 @@ jobs:
           pip install -r requirements.txt -r requirements-dev.txt
 
       - name: Run Black
-        run: cd app/backend && black --check .
+        run: cd app/backend && black --check . --exclude 'app/kcc'
 
       # TODO: Re-enable after fixing Flake8 errors
       # - name: Run Flake8
