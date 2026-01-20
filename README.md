@@ -50,6 +50,7 @@ KCC Cloud transforms your manga, comics, and documents into e-reader optimized f
 > **🚀 Try it now:** [www.mangaconverter.com](https://www.mangaconverter.com) — No installation required!
 
 > **💡 Tip:** Works great on mobile too! Try uploading a file from your smartphone to see the responsive design in action.
+
 ![Responsive Design](docs/images/screenshot-main-mobile.png)
 
 ### Built on KCC
