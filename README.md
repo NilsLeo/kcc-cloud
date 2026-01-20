@@ -37,7 +37,7 @@
     <li><a href="#-contributing">Contributing</a></li>
     <li><a href="#-license">License</a></li>
     <li><a href="#-acknowledgments">Acknowledgments</a></li>
-    <li><a href="#-star-history">Star History</a></li>
+    <!-- <li><a href="#-star-history">Star History</a></li> -->
   </ol>
 </details>
 
@@ -273,11 +273,7 @@ CELERY_CONCURRENCY=1          # Single job per worker
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for:
-- Development setup
-- Code style guidelines
-- Testing requirements
-- Pull request process
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ---
 
