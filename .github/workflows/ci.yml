@@ -32,6 +32,7 @@ jobs:
         run: cd app/backend && pytest --cov=app --cov-report=xml
         env:
           DATABASE_URL: "sqlite:///:memory:"
+          STORAGE_PATH: "/tmp/test-storage"
 
       # TODO: Re-enable after setting up Codecov
       # - name: Upload coverage
