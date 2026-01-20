@@ -25,9 +25,8 @@ jobs:
       - name: Run Black
         run: cd app/backend && black --check . --exclude 'app/kcc'
 
-      # TODO: Re-enable after fixing Flake8 errors
-      # - name: Run Flake8
-      #   run: cd app/backend && flake8 .
+      - name: Run Flake8
+        run: cd app/backend && flake8 . --exclude=app/kcc
 
       # TODO: Re-enable after fixing test import paths
       # - name: Run tests
