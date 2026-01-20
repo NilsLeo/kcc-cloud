@@ -1,8 +1,2 @@
-blank_issues_enabled: false
-contact_links:
-  - name: Question or Discussion
-    url: https://github.com/NilsLeo/kcc-cloud/discussions
-    about: Ask questions or discuss ideas with the community
-  - name: Documentation
-    url: https://github.com/NilsLeo/kcc-cloud#readme
-    about: Check the documentation for setup and usage guides
+blank_issues_enabled: true
+

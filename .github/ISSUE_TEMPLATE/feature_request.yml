@@ -1,82 +1,34 @@
-name: Feature Request
-description: Suggest a new feature or enhancement
+name: Feature request
+description: Suggest an idea or improvement
 title: "[Feature]: "
-labels: ["enhancement", "needs-triage"]
+labels: [enhancement]
 body:
-  - type: markdown
+  - type: checkboxes
+    id: checks
     attributes:
-      value: |
-        Thanks for suggesting a new feature! Please provide as much detail as possible.
-
+      label: Before submitting
+      options:
+        - label: I searched existing issues to avoid duplicates
+          required: true
   - type: textarea
     id: problem
     attributes:
-      label: Problem Statement
-      description: Is your feature request related to a problem? Describe what the problem is.
-      placeholder: "I'm frustrated when..."
+      label: Problem
+      description: What problem would this feature solve?
+      placeholder: Describe the pain point or use case
     validations:
       required: true
-
   - type: textarea
     id: solution
     attributes:
-      label: Proposed Solution
-      description: Describe the solution you'd like
-      placeholder: Describe what you want to happen...
+      label: Proposed solution
+      description: How would you like it to work?
+      placeholder: Describe the feature at a high level
     validations:
       required: true
-
-  - type: dropdown
-    id: component
-    attributes:
-      label: Which component does this relate to?
-      description: Select the primary component this feature would affect
-      options:
-        - Frontend UI
-        - Backend API
-        - Conversion Engine
-        - Docker/Deployment
-        - Documentation
-        - Other
-    validations:
-      required: true
-
   - type: textarea
-    id: alternatives
+    id: context
     attributes:
-      label: Alternatives Considered
-      description: Describe alternative solutions or features you've considered
-      placeholder: What other approaches could solve this?
-    validations:
-      required: false
+      label: Additional context (optional)
+      description: Alternatives considered, screenshots, or links
 
-  - type: textarea
-    id: use-case
-    attributes:
-      label: Use Case
-      description: Describe a specific use case or scenario where this feature would be helpful
-      placeholder: |
-        Example workflow:
-        1. User wants to...
-        2. Currently they have to...
-        3. With this feature they could...
-    validations:
-      required: false
-
-  - type: checkboxes
-    id: implementation
-    attributes:
-      label: Implementation Willingness
-      description: Are you willing to help implement this feature?
-      options:
-        - label: I'm willing to submit a pull request for this feature
-          required: false
-
-  - type: textarea
-    id: additional
-    attributes:
-      label: Additional Context
-      description: Add any other context, mockups, or screenshots about the feature request
-      placeholder: Any additional information...
-    validations:
-      required: false
