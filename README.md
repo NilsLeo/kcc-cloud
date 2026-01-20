@@ -51,7 +51,10 @@ KCC Cloud transforms your manga, comics, and documents into e-reader optimized f
 
 > **💡 Tip:** Works great on mobile too! Try uploading a file from your smartphone to see the responsive design in action.
 
-![Responsive Design](docs/images/screenshot-main-mobile.png)
+<p align="center">
+  <img src="docs/images/screenshot-main-mac.png" alt="Desktop View" width="48%" />
+  <img src="docs/images/screenshot-main-mobile.png" alt="Mobile View" width="48%" />
+</p>
 
 ### Built on KCC
 
