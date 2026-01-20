@@ -1,6 +1,5 @@
 """Tests for ConversionJob model."""
 
-import pytest
 from datetime import datetime
 from database.models import ConversionJob, JobStatus
 

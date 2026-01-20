@@ -18,7 +18,7 @@ Benefits:
 import json
 import os
 import redis
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional, Dict, Any, List
 from utils.enhanced_logger import setup_enhanced_logging, log_with_context
 
@@ -151,7 +151,7 @@ class RedisJobStore:
                     # Parse datetime fields
                     try:
                         result[key] = datetime.fromisoformat(value)
-                    except:
+                    except Exception:
                         result[key] = value
                 elif key in [
                     "file_size",
@@ -162,7 +162,7 @@ class RedisJobStore:
                     # Parse integer fields
                     try:
                         result[key] = int(value) if value else 0
-                    except:
+                    except Exception:
                         result[key] = value
                 elif key in [
                     "manga_style",
@@ -388,7 +388,8 @@ class RedisJobStore:
                 if emit_status == "PROCESSING" and (
                     emit_proc_at is not None and emit_eta is not None
                 ):
-                    # Provide only timestamps: processing_at and eta_at (absolute). FE will do all math.
+                    # Provide only timestamps: processing_at and eta_at (absolute).
+                    # FE will do all math.
                     proc_iso = (
                         emit_proc_at.isoformat()
                         if hasattr(emit_proc_at, "isoformat")
@@ -458,7 +459,8 @@ class RedisJobStore:
 
                 jobs.append(job_dict)
 
-            # Sort by created_at if present, else by job_id stable order; newest first not guaranteed via Redis
+            # Sort by created_at if present, else by job_id stable order;
+            # newest first not guaranteed via Redis
             try:
 
                 def _key(j):
@@ -570,7 +572,8 @@ class RedisJobStore:
                 except Exception as log_persist_error:
                     # Do not fail the whole operation if logs fail; record warning
                     logger.warning(
-                        f"[RedisJobStore] Failed to persist logs for job {job_id}: {log_persist_error}"
+                        f"[RedisJobStore] Failed to persist logs for job "
+                        f"{job_id}: {log_persist_error}"
                     )
 
                 log_with_context(
@@ -581,8 +584,9 @@ class RedisJobStore:
                     status=job_data.get("status"),
                 )
 
-                # Clean up Redis: remove from session set only for truly terminal states (not COMPLETE)
-                # COMPLETE jobs should remain visible so users can download them
+                # Clean up Redis: remove from session set only for truly terminal
+                # states (not COMPLETE). COMPLETE jobs should remain visible so
+                # users can download them
                 status = job_data.get("status", "")
                 if status in ["DOWNLOADED", "CANCELLED", "ERRORED"]:
                     session_key = job_data.get("session_key")

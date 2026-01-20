@@ -10,7 +10,7 @@ import os
 # Add parent directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from utils.storage.s3_storage import S3Storage
+from utils.storage.s3_storage import S3Storage  # noqa: E402
 
 
 def main():
@@ -26,7 +26,7 @@ def main():
         # Verify the configuration
         print("[CORS Setup] Verifying CORS configuration...")
         cors_config = s3.client.get_bucket_cors(Bucket=s3.bucket)
-        print(f"[CORS Setup] Current CORS rules:")
+        print("[CORS Setup] Current CORS rules:")
         for i, rule in enumerate(cors_config.get("CORSRules", []), 1):
             print(f"  Rule {i}:")
             print(f"    Allowed Origins: {rule.get('AllowedOrigins', [])}")

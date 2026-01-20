@@ -44,7 +44,8 @@ def main():
                 print("❌ ALTER TABLE DROP COLUMN failed. Your SQLite may be too old.")
                 print("   Error:", e)
                 print(
-                    "\nWorkaround: Recreate table without abandoned_at. Run these steps manually if needed:"
+                    "\nWorkaround: Recreate table without abandoned_at. "
+                    "Run these steps manually if needed:"
                 )
                 print("  - Create new table without the column, copy data, drop old, rename new.")
                 raise

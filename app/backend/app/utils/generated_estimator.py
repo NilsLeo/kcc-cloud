@@ -3,7 +3,9 @@ Auto-generated ETA estimation function using Decision Tree regression (DCT).
 Trained on your own test/training data (historical conversion jobs).
 
 Generated: 2026-01-18 23:31:37
-Features: page_count, input_file_size_mb, file_type_pdf, file_type_cbz, file_type_cbr, upscale, hq, manga_style, mozjpeg, force_color, autolevel, force_png, two_panel, cropping, splitter
+Features: page_count, input_file_size_mb, file_type_pdf, file_type_cbz,
+file_type_cbr, upscale, hq, manga_style, mozjpeg, force_color, autolevel,
+force_png, two_panel, cropping, splitter
 Tree depth: 6
 Leaf nodes: 17
 

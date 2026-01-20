@@ -4,7 +4,7 @@ import logging
 import os
 import uuid
 from datetime import datetime
-from flask import request, jsonify, send_file, current_app
+from flask import request, jsonify, send_file
 from werkzeug.utils import secure_filename
 
 from database.models import ConversionJob, get_db_session
@@ -459,7 +459,8 @@ def register_routes(app):
                     continue
 
             logger.info(
-                f"Downloads fetched: {len(downloads_data)} of {total_count} total ({skipped_count} skipped)"
+                f"Downloads fetched: {len(downloads_data)} of {total_count} total "
+                f"({skipped_count} skipped)"
             )
 
             return (

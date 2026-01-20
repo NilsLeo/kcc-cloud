@@ -1,4 +1,4 @@
-from .models import (
+from .models import (  # noqa: F401
     Base,
     ConversionJob,
     SessionLocal,

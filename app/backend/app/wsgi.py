@@ -5,7 +5,7 @@ import eventlet
 
 eventlet.monkey_patch()
 
-from app import app, socketio
+from app import app, socketio  # noqa: E402
 
 # Routes are already registered in app.py when imported
 # No need to call register_routes again here

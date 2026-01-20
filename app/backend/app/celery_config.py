@@ -50,7 +50,8 @@ celery_app.conf.update(
     task_track_started=True,  # Track when tasks start, not just when they complete
     task_acks_late=True,  # Acknowledge tasks after completion (more reliable)
     worker_prefetch_multiplier=1,  # Workers fetch one task at a time (prevents hoarding)
-    worker_send_task_events=True,  # Workers send task events for monitoring (required for event listener)
+    # Workers send task events for monitoring (required for event listener)
+    worker_send_task_events=True,
     # Result backend settings
     result_expires=86400,  # Results expire after 24 hours (1 day)
     result_backend_always_retry=True,  # Retry result backend operations on failure
@@ -77,7 +78,10 @@ celery_app.conf.update(
     },
     # Logging
     worker_log_format="[%(asctime)s: %(levelname)s/%(processName)s] %(message)s",
-    worker_task_log_format="[%(asctime)s: %(levelname)s/%(processName)s][%(task_name)s(%(task_id)s)] %(message)s",
+    worker_task_log_format=(
+        "[%(asctime)s: %(levelname)s/%(processName)s]"
+        "[%(task_name)s(%(task_id)s)] %(message)s"
+    ),
 )
 
 
@@ -95,8 +99,7 @@ def reset_celery_broker_connection():
 
 
 try:
-    from gunicorn.app.base import BaseApplication
-    import os
+    from gunicorn.app.base import BaseApplication  # noqa: F401
 
     if "gunicorn" in os.environ.get("SERVER_SOFTWARE", ""):
         if hasattr(os, "register_at_fork"):
@@ -108,6 +111,6 @@ except ImportError:
 # Import tasks to register them
 # --------------------------
 try:
-    import tasks
+    import tasks  # noqa: F401
 except ImportError:
     pass

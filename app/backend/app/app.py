@@ -4,12 +4,10 @@ FOSS MangaConverter Flask Application - Simplified version without auth/S3/analy
 
 import logging
 import os
-from datetime import datetime
 from flask import Flask
 from flask_cors import CORS
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO
 from utils.routes import register_routes
-from database.models import ConversionJob, get_db_session
 from utils.socketio_broadcast import broadcast_queue_update as shared_broadcast
 
 # Setup simple logging
@@ -66,13 +64,13 @@ register_routes(app)
 @socketio.on("connect")
 def handle_connect():
     """Handle client connection."""
-    logger.info(f"Client connected")
+    logger.info("Client connected")
 
 
 @socketio.on("disconnect")
 def handle_disconnect():
     """Handle client disconnection."""
-    logger.info(f"Client disconnected")
+    logger.info("Client disconnected")
 
 
 @socketio.on("subscribe_queue")

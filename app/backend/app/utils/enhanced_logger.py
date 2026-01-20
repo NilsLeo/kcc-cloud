@@ -1,6 +1,6 @@
 import logging
 import sys
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 
 def setup_enhanced_logging(name: Optional[str] = None, level: int = logging.INFO) -> logging.Logger:

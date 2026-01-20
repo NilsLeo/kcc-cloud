@@ -1,8 +1,6 @@
 """Tests for storage functionality."""
 
 import pytest
-import os
-from pathlib import Path
 
 
 class TestLocalStorage:

@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 
 class AdvancedOption(Enum):
@@ -194,7 +194,10 @@ class AdvancedOption(Enum):
         "key": "no_kepub",
         "flag": "--nokepub",
         "type": "boolean",
-        "description": "If format is EPUB, output file with '.epub' extension rather than '.kepub.epub'",
+        "description": (
+            "If format is EPUB, output file with '.epub' extension "
+            "rather than '.kepub.epub'"
+        ),
     }
 
     # Spread options
@@ -202,7 +205,10 @@ class AdvancedOption(Enum):
         "key": "spread_shift",
         "flag": "--spreadshift",
         "type": "boolean",
-        "description": "Shift first page to opposite side in landscape for two page spread alignment",
+        "description": (
+            "Shift first page to opposite side in landscape for two page "
+            "spread alignment"
+        ),
     }
     NO_ROTATE = {
         "key": "no_rotate",
@@ -340,9 +346,10 @@ def validate_advanced_options(options: Dict[str, Any], device_profile: str) -> D
             if option.key == "output_format":
                 # For output format, "Auto" is not acceptable for OTHER profile
                 if not value or value == "Auto":
-                    errors[
-                        option.key
-                    ] = f"{option.description} must be specified (not 'Auto') when using 'Other' profile"
+                    errors[option.key] = (
+                        f"{option.description} must be specified (not 'Auto') "
+                        f"when using 'Other' profile"
+                    )
             elif not value:
                 errors[option.key] = f"{option.description} is required when using 'Other' profile"
 

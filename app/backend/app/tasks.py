@@ -187,7 +187,8 @@ def convert_comic_task(self, job_id):
         job.estimated_duration_seconds = projected_eta
         db.commit()
 
-        # Store in Redis for frontend - provide absolute ETA timestamp (eta_at) and projected seconds for fallback
+        # Store in Redis for frontend - provide absolute ETA timestamp (eta_at)
+        # and projected seconds for fallback
         try:
             eta_at = (
                 job.processing_started_at or job.processing_at or datetime.now(timezone.utc)

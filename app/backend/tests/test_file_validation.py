@@ -1,6 +1,5 @@
 """Tests for file validation functionality."""
 
-import pytest
 from utils.routes import allowed_file
 
 

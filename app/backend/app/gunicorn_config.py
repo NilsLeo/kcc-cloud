@@ -6,8 +6,6 @@ is shared (and broken) in child processes. This post_fork hook closes the connec
 after each fork, forcing Celery to create fresh connections in each worker.
 """
 
-import logging
-
 
 def post_fork(server, worker):
     """

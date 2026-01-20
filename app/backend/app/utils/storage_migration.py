@@ -3,8 +3,7 @@ Storage path migration utilities.
 Handles renaming S3 paths when sessions are claimed by users.
 """
 
-from typing import Optional
-from database.models import Session, ConversionJob
+from database.models import Session  # noqa: F401
 from utils.storage.s3_storage import S3Storage
 from utils.enhanced_logger import setup_enhanced_logging, log_with_context
 

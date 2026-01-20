@@ -63,7 +63,8 @@ def get_download_speed_mbps() -> float:
         try:
             redis_client.setex(SPEED_TEST_CACHE_KEY, SPEED_TEST_CACHE_TTL, str(speed))
             logger.info(
-                f"[NetworkSpeed] Cached speed test result: {speed:.2f} Mbps (TTL: {SPEED_TEST_CACHE_TTL}s)"
+                f"[NetworkSpeed] Cached speed test result: {speed:.2f} Mbps "
+                f"(TTL: {SPEED_TEST_CACHE_TTL}s)"
             )
         except Exception as e:
             logger.warning(f"[NetworkSpeed] Failed to cache speed: {e}")
@@ -106,7 +107,8 @@ def run_speed_test() -> Optional[float]:
 
                     elapsed = time.time() - start_time
                     logger.info(
-                        f"[NetworkSpeed] Speed test completed in {elapsed:.1f}s: {speed_mbps:.2f} Mbps"
+                        f"[NetworkSpeed] Speed test completed in {elapsed:.1f}s: "
+                        f"{speed_mbps:.2f} Mbps"
                     )
                     return speed_mbps
 

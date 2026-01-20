@@ -5,7 +5,6 @@ Shared SocketIO broadcasting utility for both Flask and Celery workers.
 import logging
 from flask_socketio import SocketIO
 from datetime import datetime
-from database.models import get_db_session, ConversionJob
 
 try:
     # Prefer Redis-backed queue data

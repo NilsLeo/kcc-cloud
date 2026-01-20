@@ -169,7 +169,7 @@ def unwrap_nested_archives(
             log_with_context(
                 logger,
                 "warning",
-                f"Nested archive unwrapping stopped: directory is empty",
+                "Nested archive unwrapping stopped: directory is empty",
                 job_id=job_id,
                 user_id=user_id,
                 current_dir=current_dir,
@@ -200,7 +200,7 @@ def unwrap_nested_archives(
             log_with_context(
                 logger,
                 "info",
-                f"Nested archive unwrapping complete: single non-archive file found",
+                "Nested archive unwrapping complete: single non-archive file found",
                 job_id=job_id,
                 user_id=user_id,
                 final_dir=current_dir,
