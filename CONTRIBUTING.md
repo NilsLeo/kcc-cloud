@@ -189,6 +189,67 @@ test: add unit tests for file validation
    - Reference any related issues
    - Ensure CI checks pass
 
+## Branching & Release Workflow
+
+We use a simple three-branch workflow:
+
+```
+feature/* → develop → main (auto-release)
+```
+
+### Branch Strategy
+
+- **`feature/*`** - New features and bug fixes
+- **`develop`** - Integration and testing branch
+- **`main`** - Production releases with automatic versioning
+
+### Release Process
+
+1. **Development** happens on `feature/*` branches → merge to `develop`
+   - CI builds Docker image: `nilsleo/kcc-web:feature-name`
+
+2. **Integration testing** on `develop` branch
+   - Every push builds: `nilsleo/kcc-web:develop`
+
+3. **Production release** - merge `develop` → `main`
+   - **Automatically**:
+     - Increments patch version (e.g., `v1.2.3` → `v1.2.4`)
+     - Builds and pushes Docker images:
+       - `nilsleo/kcc-web:v1.2.4`
+       - `nilsleo/kcc-web:latest`
+       - `nilsleo/kcc-web:stable`
+     - Creates Git tag `v1.2.4`
+     - Creates GitHub Release with auto-generated changelog
+
+### Docker Image Tags
+
+| Branch | Tags | Usage |
+|--------|------|-------|
+| `feature/*` | `feature-name`, `feature-name-abc1234` | Feature testing |
+| `develop` | `develop`, `develop-abc1234` | Integration testing |
+| `main` | `v1.2.3`, `latest`, `stable` | Production |
+
+### Versioning
+
+- **Automatic**: Every merge to `main` auto-increments the patch version
+- **Format**: Semantic Versioning `vMAJOR.MINOR.PATCH`
+- **Sync**: Docker tags and GitHub releases are always in sync (created atomically)
+
+### Creating a Release
+
+```bash
+# When ready for production release:
+git checkout develop
+git pull origin develop
+
+# Create PR: develop → main
+# After merge, CI automatically:
+# - Runs all tests
+# - Increments version
+# - Builds and tags Docker images
+# - Creates GitHub release
+```
+
 ## Code Review
 
 All contributions go through code review:
