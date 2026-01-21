@@ -10,18 +10,14 @@ from flask_socketio import SocketIO
 from utils.routes import register_routes
 from utils.socketio_broadcast import broadcast_queue_update as shared_broadcast
 
-# Setup simple logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
-# Create Flask app
 app = Flask(__name__)
 logger.info("Flask application initialized")
 
-# Initialize SocketIO for real-time updates
-# Use Redis message queue to share messages with Celery workers
 redis_url = os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0")
 socketio_cors = os.getenv("SOCKETIO_CORS_ORIGINS", "*")
 logger.info(f"Connecting to Redis message queue: {redis_url}")
@@ -102,11 +98,6 @@ def handle_request_queue_status():
 # Make socketio and broadcast_queue_update available for tasks
 app.socketio = socketio
 app.broadcast_queue_update = shared_broadcast
-
-logger.info("=" * 60)
-logger.info("MangaConverter FOSS backend started successfully")
-logger.info("Ready to accept conversion requests")
-logger.info("=" * 60)
 
 if __name__ == "__main__":
     # Development mode
