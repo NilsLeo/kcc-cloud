@@ -55,6 +55,7 @@ os.makedirs(os.path.join(storage_path, "outputs"), exist_ok=True)
 
 logger.info(f"Storage path: {storage_path}")
 logger.info(f"Allowed origins: {allowed_origins}")
+logger.info("Testing automated release workflow")
 
 # Register all Flask routes
 register_routes(app)
