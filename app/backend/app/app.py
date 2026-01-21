@@ -62,6 +62,8 @@ logger.info(f"Storage configured:")
 logger.info(f"  - Base path: {storage_path}")
 logger.info(f"  - Uploads: {uploads_path}")
 logger.info(f"  - Outputs: {outputs_path}")
+logger.info(f"Allowed origins: {allowed_origins}")
+logger.info("Testing automated release workflow")
 
 # Register all Flask routes
 register_routes(app)
