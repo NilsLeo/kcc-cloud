@@ -1,9 +1,10 @@
-name: Docker Hub Publish
+name: Docker Hub Publish (Development)
 
 on:
   push:
     branches:
-      - '**'
+      - develop
+      - 'feature/**'
 
 env:
   IMAGE_NAME: nilsleo/kcc-web
@@ -38,9 +39,8 @@ jobs:
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
-            type=sha
+            type=sha,prefix={{branch}}-
             type=ref,event=branch
-            type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push via local script
         run: |
