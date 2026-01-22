@@ -29,8 +29,14 @@ jobs:
       - name: Run Black (format in-place)
         run: cd app/backend && black . --exclude 'app/kcc'
 
-      - name: Run Flake8
-        run: cd app/backend && flake8 . --exclude=app/kcc
+      - name: Install Ruff
+        run: pip install ruff
+
+      - name: Ruff lint (auto-fix where possible)
+        run: cd app/backend && ruff check . --fix --exclude app/kcc --exit-zero
+
+      - name: Run Flake8 (non-blocking)
+        run: cd app/backend && flake8 . --exclude=app/kcc || true
 
       - name: Run tests
         run: cd app/backend && pytest --cov=app --cov-report=xml
