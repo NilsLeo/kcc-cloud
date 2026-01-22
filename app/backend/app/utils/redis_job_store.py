@@ -20,6 +20,12 @@ import os
 import redis
 from datetime import datetime
 from typing import Optional, Dict, Any, List
+try:
+    # Optional DB access for backfilling missing fields
+    from database.models import get_db_session, ConversionJob  # type: ignore
+except Exception:
+    get_db_session = None  # type: ignore
+    ConversionJob = None  # type: ignore
 from utils.enhanced_logger import setup_enhanced_logging, log_with_context
 
 logger = setup_enhanced_logging()
@@ -227,6 +233,20 @@ class RedisJobStore:
             job_key = f"job:{job_id}"
             redis_client.hset(job_key, mapping=redis_updates)
 
+            # Log when we touch filename/size fields to trace Unknown size issues
+            try:
+                touched = {k: updates.get(k) for k in ["input_filename", "file_size", "output_file_size"] if k in updates}
+                if touched:
+                    log_with_context(
+                        logger,
+                        "info",
+                        "[RedisJobStore] Updated job fields",
+                        job_id=job_id,
+                        **{k: v for k, v in touched.items()},
+                    )
+            except Exception:
+                pass
+
             return True
 
         except Exception as e:
@@ -331,8 +351,8 @@ class RedisJobStore:
                     continue
 
                 raw_status = job_data.get("status", "UNKNOWN")
-                # Skip terminal states except COMPLETE
-                if raw_status in ["DOWNLOADED", "CANCELLED", "ERRORED"]:
+                # Skip terminal states except COMPLETE and ERRORED (ERRORED should be surfaced to clients)
+                if raw_status in ["DOWNLOADED", "CANCELLED"]:
                     continue
 
                 # Normalize created_at to JSON-serializable ISO string if present
@@ -349,41 +369,56 @@ class RedisJobStore:
                         proc_at = job_data.get("processing_at") or job_data.get(
                             "processing_started_at"
                         )
-                        eta_at = None
-                        projected_eta = None
-                        raw_pp = job_data.get("processing_progress")
-                        if raw_pp:
-                            import json as _json
-
-                            parsed = _json.loads(raw_pp) if isinstance(raw_pp, str) else raw_pp
-                            eta_at = parsed.get("eta_at")
-                            projected_eta = parsed.get("projected_eta")
-                        if eta_at is None and projected_eta is None:
-                            projected_eta = job_data.get("estimated_duration_seconds")
-                        if proc_at and (eta_at is not None or projected_eta is not None):
+                        eta_at = job_data.get("eta_at")
+                        if proc_at and eta_at:
                             emit_proc_at = proc_at
-                            # Prefer eta_at absolute timestamp; fallback to seconds
-                            if eta_at is not None:
-                                emit_eta = str(eta_at)
-                            else:
-                                emit_eta = (
-                                    int(projected_eta)
-                                    if isinstance(projected_eta, (int, str))
-                                    else projected_eta
-                                )
+                            emit_eta = eta_at
                         else:
                             emit_status = "QUEUED"
                     except Exception:
                         emit_status = "QUEUED"
 
+                # Backward-compatible filename + size resolution
+                _filename = (
+                    job_data.get("input_filename")
+                    or job_data.get("filename")
+                    or job_data.get("original_filename")
+                    or ""
+                )
+                _filesize = job_data.get("file_size")
+                if not _filesize:
+                    _filesize = job_data.get("input_file_size")
+                try:
+                    _filesize_int = int(_filesize or 0)
+                except Exception:
+                    _filesize_int = 0
+
                 job_dict: Dict[str, Any] = {
                     "job_id": job_id,
-                    "filename": job_data.get("input_filename", ""),
+                    "filename": _filename,
                     "status": emit_status,
                     "device_profile": job_data.get("device_profile", ""),
-                    "file_size": int(job_data.get("file_size", 0) or 0),
+                    "file_size": _filesize_int,
                     "created_at": _created,
                 }
+
+                # Backfill from DB if filename/size missing
+                try:
+                    if get_db_session and ConversionJob and (
+                        (not job_dict["filename"]) or (job_dict["file_size"] == 0)
+                    ):
+                        db = get_db_session()
+                        try:
+                            j = db.query(ConversionJob).get(job_id)
+                            if j:
+                                if not job_dict["filename"] and getattr(j, "input_filename", None):
+                                    job_dict["filename"] = j.input_filename
+                                if job_dict["file_size"] == 0 and getattr(j, "input_file_size", None):
+                                    job_dict["file_size"] = int(j.input_file_size or 0)
+                        finally:
+                            db.close()
+                except Exception:
+                    pass
 
                 if emit_status == "PROCESSING" and (
                     emit_proc_at is not None and emit_eta is not None
@@ -395,6 +430,8 @@ class RedisJobStore:
                         if hasattr(emit_proc_at, "isoformat")
                         else str(emit_proc_at)
                     )
+                    if " " in proc_iso:
+                        proc_iso = proc_iso.replace(" ", "T")
                     if proc_iso and (
                         "Z" not in proc_iso
                         and "+" not in proc_iso
@@ -403,29 +440,20 @@ class RedisJobStore:
                         proc_iso = proc_iso + "Z"
                     job_dict["processing_at"] = proc_iso
 
-                    # Compute eta_at string if needed
-                    if isinstance(emit_eta, str):
-                        eta_at_str = emit_eta
-                    else:
-                        try:
-                            from datetime import datetime, timedelta
-
-                            base = proc_iso
-                            if base.endswith("Z"):
-                                base = base[:-1] + "+00:00"
-                            eta_at_str = (
-                                datetime.fromisoformat(base) + timedelta(seconds=int(emit_eta))
-                            ).isoformat()
-                        except Exception:
-                            eta_at_str = None
-                    if eta_at_str is not None and (
-                        "Z" not in eta_at_str
-                        and "+" not in eta_at_str
-                        and "-" not in eta_at_str.split("T")[-1]
+                    # eta_at provided as absolute timestamp string
+                    eta_iso = (
+                        emit_eta.isoformat() if hasattr(emit_eta, "isoformat") else str(emit_eta)
+                    )
+                    if " " in eta_iso:
+                        eta_iso = eta_iso.replace(" ", "T")
+                    if (
+                        eta_iso
+                        and "Z" not in eta_iso
+                        and "+" not in eta_iso
+                        and "-" not in eta_iso.split("T")[-1]
                     ):
-                        eta_at_str = eta_at_str + "Z"
-                    if eta_at_str is not None:
-                        job_dict["eta_at"] = eta_at_str
+                        eta_iso = eta_iso + "Z"
+                    job_dict["eta_at"] = eta_iso
 
                 if emit_status == "UPLOADING":
                     parts_key = f"multipart_parts:{job_id}"
@@ -812,7 +840,7 @@ def get_active_jobs_for_session(session_key: str) -> List[Dict[str, Any]]:
 
             # Skip jobs in terminal states EXCEPT COMPLETE (users need to see COMPLETE jobs)
             raw_status = job_data.get("status", "UNKNOWN")
-            if raw_status in ["DOWNLOADED", "CANCELLED", "ERRORED"]:
+            if raw_status in ["DOWNLOADED", "CANCELLED"]:
                 logger.debug(f"Skipping terminal state job {job_id} with status {raw_status}")
                 continue
 
@@ -829,40 +857,54 @@ def get_active_jobs_for_session(session_key: str) -> List[Dict[str, Any]]:
             if raw_status == "PROCESSING":
                 try:
                     proc_at = job_data.get("processing_at") or job_data.get("processing_started_at")
-                    eta_at = None
-                    projected_eta = None
-                    raw_pp = job_data.get("processing_progress")
-                    if raw_pp:
-                        import json as _json
-
-                        parsed = _json.loads(raw_pp) if isinstance(raw_pp, str) else raw_pp
-                        eta_at = parsed.get("eta_at")
-                        projected_eta = parsed.get("projected_eta")
-                    if eta_at is None and projected_eta is None:
-                        projected_eta = job_data.get("estimated_duration_seconds")
-                    if proc_at and (eta_at is not None or projected_eta is not None):
+                    eta_at = job_data.get("eta_at")
+                    if proc_at and eta_at:
                         emit_proc_at = proc_at
-                        if eta_at is not None:
-                            emit_eta = str(eta_at)
-                        else:
-                            emit_eta = (
-                                int(projected_eta)
-                                if isinstance(projected_eta, (int, str))
-                                else projected_eta
-                            )
+                        emit_eta = eta_at
                     else:
                         emit_status = "QUEUED"
                 except Exception:
                     emit_status = "QUEUED"
 
+            # Backward-compatible filename and size for session view
+            _filename = (
+                job_data.get("input_filename")
+                or job_data.get("filename")
+                or job_data.get("original_filename")
+                or ""
+            )
+            _filesize = job_data.get("file_size") or job_data.get("input_file_size") or 0
+            try:
+                _filesize_int = int(_filesize or 0)
+            except Exception:
+                _filesize_int = 0
+
             job_dict = {
                 "job_id": job_id,
-                "filename": job_data.get("input_filename", ""),
+                "filename": _filename,
                 "status": emit_status,
                 "device_profile": job_data.get("device_profile", ""),
-                "file_size": int(job_data.get("file_size", 0)),
+                "file_size": _filesize_int,
                 "created_at": _created,
             }
+
+            # Backfill from DB if filename/size missing for session view
+            try:
+                if get_db_session and ConversionJob and (
+                    (not job_dict["filename"]) or (job_dict["file_size"] == 0)
+                ):
+                    db = get_db_session()
+                    try:
+                        j = db.query(ConversionJob).get(job_id)
+                        if j:
+                            if not job_dict["filename"] and getattr(j, "input_filename", None):
+                                job_dict["filename"] = j.input_filename
+                            if job_dict["file_size"] == 0 and getattr(j, "input_file_size", None):
+                                job_dict["file_size"] = int(j.input_file_size or 0)
+                    finally:
+                        db.close()
+            except Exception:
+                pass
 
             # Mark dismissal flag for COMPLETE jobs
             if emit_status == "COMPLETE":
@@ -871,11 +913,7 @@ def get_active_jobs_for_session(session_key: str) -> List[Dict[str, Any]]:
             # Add status-specific fields based on emitted status
             status = emit_status
 
-            if status == "QUEUED":
-                # Worker download speed for simulating download progress
-                from utils.network_speed import get_download_speed_mbps
-
-                job_dict["worker_download_speed_mbps"] = get_download_speed_mbps()
+            # No additional fields for QUEUED
 
             if status == "UPLOADING":
                 # Upload progress from Redis multipart tracking
@@ -898,6 +936,8 @@ def get_active_jobs_for_session(session_key: str) -> List[Dict[str, Any]]:
                     if hasattr(emit_proc_at, "isoformat")
                     else str(emit_proc_at)
                 )
+                if " " in proc_iso:
+                    proc_iso = proc_iso.replace(" ", "T")
                 if proc_iso and (
                     "Z" not in proc_iso
                     and "+" not in proc_iso
@@ -905,28 +945,18 @@ def get_active_jobs_for_session(session_key: str) -> List[Dict[str, Any]]:
                 ):
                     proc_iso = proc_iso + "Z"
                 job_dict["processing_at"] = proc_iso
-                if isinstance(emit_eta, str):
-                    eta_at_str = emit_eta
-                else:
-                    try:
-                        from datetime import datetime, timedelta
-
-                        base = proc_iso
-                        if base.endswith("Z"):
-                            base = base[:-1] + "+00:00"
-                        eta_at_str = (
-                            datetime.fromisoformat(base) + timedelta(seconds=int(emit_eta))
-                        ).isoformat()
-                    except Exception:
-                        eta_at_str = None
-                if eta_at_str is not None and (
-                    "Z" not in eta_at_str
-                    and "+" not in eta_at_str
-                    and "-" not in eta_at_str.split("T")[-1]
+                # eta_at provided as absolute timestamp string
+                eta_iso = emit_eta.isoformat() if hasattr(emit_eta, "isoformat") else str(emit_eta)
+                if " " in eta_iso:
+                    eta_iso = eta_iso.replace(" ", "T")
+                if (
+                    eta_iso
+                    and "Z" not in eta_iso
+                    and "+" not in eta_iso
+                    and "-" not in eta_iso.split("T")[-1]
                 ):
-                    eta_at_str = eta_at_str + "Z"
-                if eta_at_str is not None:
-                    job_dict["eta_at"] = eta_at_str
+                    eta_iso = eta_iso + "Z"
+                job_dict["eta_at"] = eta_iso
 
             if status == "COMPLETE":
                 # Output file info

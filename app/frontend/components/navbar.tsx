@@ -3,9 +3,12 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { Download, Upload, Menu, X } from "lucide-react"
+import { Download, Upload, Menu, X, Star } from "lucide-react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+
+const GITHUB_REPO_URL = "https://github.com/NilsLeo/kcc-cloud"
 
 export function Navbar() {
   const pathname = usePathname()
@@ -27,7 +30,7 @@ export function Navbar() {
   ]
 
   return (
-    <nav className="flex items-center">
+    <nav className="flex items-center gap-2">
       {/* Desktop Navigation */}
       <div className="hidden md:flex items-center gap-6">
         {navLinks.map((link) => {
@@ -46,6 +49,28 @@ export function Navbar() {
             </Link>
           )
         })}
+      </div>
+
+      {/* GitHub Star Button - Desktop */}
+      <div className="hidden md:block">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <a
+                href={GITHUB_REPO_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 hover:border-amber-500/50 transition-colors"
+              >
+                <Star className="h-3.5 w-3.5 fill-current" />
+                <span>Star</span>
+              </a>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Star us on GitHub</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
 
       {/* Mobile Navigation */}
@@ -80,6 +105,18 @@ export function Navbar() {
                   </Link>
                 )
               })}
+              
+              {/* GitHub Star - Mobile */}
+              <a
+                href={GITHUB_REPO_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-3 px-4 py-3 rounded-md text-sm font-medium transition-colors hover:bg-muted text-amber-600 dark:text-amber-400"
+              >
+                <Star className="h-5 w-5 fill-current" />
+                <span>Star on GitHub</span>
+              </a>
             </div>
           </div>
         )}

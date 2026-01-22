@@ -1,5 +1,3 @@
-"""Simplified routes for FOSS manga converter - no auth, no S3, local storage only."""
-
 import logging
 import os
 import uuid
@@ -9,6 +7,7 @@ from werkzeug.utils import secure_filename
 
 from database.models import ConversionJob, get_db_session
 from utils.enums.job_status import JobStatus
+from utils.redis_job_store import RedisJobStore
 from utils.storage import storage
 from tasks import convert_comic_task
 from utils.socketio_broadcast import broadcast_queue_update
@@ -142,11 +141,34 @@ def register_routes(app):
                 if file_size:
                     job.input_file_size = file_size
                     db.commit()
+                # Mirror base metadata to Redis so queue updates have filename and size
+                try:
+                    logger.info(
+                        f"[Routes] Mirror to Redis: job_id={job_id}, filename={input_filename}, file_size={file_size}"
+                    )
+                    RedisJobStore.update_job(
+                        job_id,
+                        {
+                            "status": JobStatus.UPLOADING.value,
+                            "input_filename": input_filename,
+                            "device_profile": device_profile,
+                            "file_size": file_size or 0,
+                            "created_at": job.created_at,
+                        },
+                    )
+                except Exception:
+                    pass
 
                 # Update job status to QUEUED and start conversion task
                 job.status = JobStatus.QUEUED
                 job.queued_at = datetime.utcnow()
                 db.commit()
+                # Update Redis status to QUEUED
+                try:
+                    logger.info(f"[Routes] Update Redis status to QUEUED for job_id={job_id}")
+                    RedisJobStore.update_job(job_id, {"status": JobStatus.QUEUED.value})
+                except Exception:
+                    pass
 
                 # Queue the conversion task
                 task = convert_comic_task.delay(job_id)
@@ -350,8 +372,6 @@ def register_routes(app):
         finally:
             db.close()
 
-    # Legacy dismiss endpoint removed in favor of unified cancel endpoint which
-    # dismisses terminal jobs and cancels active ones.
 
     @app.route("/api/queue/status", methods=["GET"])
     def get_queue_status():

@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react"
 import { fetchWithLicense } from "@/lib/utils"
-import { logError } from "@/lib/logger"
+import { log, logError } from "@/lib/logger"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Download, FileText, Check, Loader2, Trash2, Clock, ArrowRight, HardDrive } from "lucide-react"
@@ -112,6 +112,10 @@ export function ConvertedFiles({ files, onClearAll, onRemoveFile }: ConvertedFil
   }
 
   const downloadFile = async (file: ConvertedFileInfo) => {
+    // Log click
+    try {
+      log("[UI] Download button clicked", { id: file.id, job_id: file.downloadId, filename: file.convertedName })
+    } catch {}
     if (usingMockData) {
       console.log("[v0] Using mock data, simulating download...")
       setDownloadingFiles((prev) => ({ ...prev, [file.id]: true }))
@@ -123,8 +127,7 @@ export function ConvertedFiles({ files, onClearAll, onRemoveFile }: ConvertedFil
 
     try {
       setDownloadingFiles((prev) => ({ ...prev, [file.id]: true }))
-
-      console.log("[v0] Attempting download from localhost:8060...")
+      try { log("[UI] Starting download request", { job_id: file.downloadId, filename: file.convertedName }) } catch {}
       const response = await fetchWithLicense(`${apiUrl}/download/${file.downloadId}`)
       if (!response.ok) {
         const errText = await response.text()
@@ -139,6 +142,7 @@ export function ConvertedFiles({ files, onClearAll, onRemoveFile }: ConvertedFil
       link.style.display = "none"
       document.body.appendChild(link)
       downloadLinksRef.current.push(link)
+      try { log("[UI] Starting browser download", { job_id: file.downloadId, filename: file.convertedName }) } catch {}
       link.click()
 
       setTimeout(() => {

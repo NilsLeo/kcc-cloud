@@ -1,5 +1,4 @@
 """
-Simplified Celery tasks for FOSS MangaConverter - local storage only.
 
 This module defines Celery tasks that can be executed asynchronously by worker processes.
 Tasks are queued via Redis and processed independently from the main Flask application.
@@ -32,12 +31,9 @@ logger = logging.getLogger(__name__)
 @celery_app.task(
     bind=True,
     name="mangaconverter.convert_comic",
-    max_retries=3,
-    default_retry_delay=60,
-    autoretry_for=(Exception,),
-    retry_backoff=True,
-    retry_backoff_max=600,
-    retry_jitter=True,
+    # Do not auto‑retry: failures should mark job ERRORED and broadcast immediately
+    autoretry_for=(),
+    max_retries=0,
 )
 def convert_comic_task(self, job_id):
     """
@@ -54,7 +50,6 @@ def convert_comic_task(self, job_id):
     temp_dir = None
 
     try:
-        # Get job from database
         job = db.query(ConversionJob).filter_by(id=job_id).first()
 
         if not job:
@@ -62,7 +57,6 @@ def convert_comic_task(self, job_id):
 
         logger.info(f"Starting conversion for job {job_id}: {job.input_filename}")
 
-        # Update job status to PROCESSING
         job.status = JobStatus.PROCESSING
         job.processing_at = datetime.now(timezone.utc)
         job.processing_started_at = datetime.now(timezone.utc)
@@ -180,6 +174,18 @@ def convert_comic_task(self, job_id):
             "filename": job.input_filename or job.original_filename,
             "advanced_options": job.get_options_dict(),
         }
+        # Ensure Redis has base metadata for UI (filename + size)
+        try:
+            RedisJobStore.update_job(
+                job_id,
+                {
+                    "input_filename": job.input_filename or job.original_filename,
+                    "file_size": file_size,
+                    "device_profile": job.device_profile,
+                },
+            )
+        except Exception:
+            pass
         projected_eta = estimate_from_job(job_data)
         logger.info(f"Estimated processing time: {projected_eta}s for job {job_id}")
 
@@ -188,7 +194,6 @@ def convert_comic_task(self, job_id):
         db.commit()
 
         # Store in Redis for frontend - provide absolute ETA timestamp (eta_at)
-        # and projected seconds for fallback
         try:
             eta_at = (
                 job.processing_started_at or job.processing_at or datetime.now(timezone.utc)
@@ -196,13 +201,13 @@ def convert_comic_task(self, job_id):
             RedisJobStore.update_job(
                 job_id,
                 {
-                    "processing_progress": {
-                        "eta_at": eta_at.isoformat(),
-                        "projected_eta": projected_eta,
-                    }
+                    # Frontend only needs timestamps: processing_at (already set) and eta_at
+                    "eta_at": eta_at.isoformat(),
                 },
             )
-            logger.info(f"Updated Redis with projected_eta={projected_eta}s for job {job_id}")
+            logger.info(
+                f"Updated Redis with eta_at={eta_at.isoformat()} (seconds={projected_eta}) for job {job_id}"
+            )
         except Exception:
             pass
 
@@ -225,6 +230,20 @@ def convert_comic_task(self, job_id):
         logger.info(f"Running KCC command: {' '.join(kcc_command)}")
 
         # Run KCC conversion
+        #
+        # Important: isolate KCC's temporary workspace per job.
+        # - KCC uses Python's tempfile.gettempdir() (which honors TMPDIR/TMP/TEMP)
+        #   to create work dirs like 'KCC-*' and also deletes ALL such dirs
+        #   it finds under gettempdir() at startup (checkPre()).
+        # - When multiple conversions run in the same container and share '/tmp',
+        #   one run can delete another run's work mid‑conversion.
+        # - By scoping TMPDIR/TMP/TEMP to this job's unique 'temp_dir', each run
+        #   cleans only its own area and cannot affect other in‑flight jobs.
+        env = os.environ.copy()
+        env["TMPDIR"] = temp_dir  # POSIX respected by tempfile.gettempdir()
+        env["TMP"] = temp_dir     # extra compatibility
+        env["TEMP"] = temp_dir    # extra compatibility
+
         start_time = datetime.now(timezone.utc)
         process = subprocess.Popen(
             kcc_command,
@@ -232,6 +251,7 @@ def convert_comic_task(self, job_id):
             stderr=subprocess.STDOUT,
             universal_newlines=True,
             cwd=temp_dir,
+            env=env,
         )
 
         # Stream output
@@ -346,7 +366,8 @@ def convert_comic_task(self, job_id):
         except Exception as db_error:
             logger.error(f"Failed to update job status: {db_error}")
 
-        raise
+        # Do not re-raise; we handled the failure and broadcasted ERRORED
+        return {"status": "error", "job_id": job_id, "error": str(e)}
 
     finally:
         db.close()

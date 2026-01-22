@@ -50,14 +50,11 @@ def broadcast_queue_update():
             proc_debug = []
             for j in jobs_list:
                 if j.get("status") == "PROCESSING":
-                    pp = j.get("processing_progress") or {}
                     proc_debug.append(
                         {
                             "job_id": j.get("job_id"),
-                            "has_eta": "projected_eta" in pp
-                            and pp.get("projected_eta") is not None,
-                            "has_processing_at": "processing_at" in j
-                            and j.get("processing_at") is not None,
+                            "has_eta_at": j.get("eta_at") is not None,
+                            "has_processing_at": j.get("processing_at") is not None,
                         }
                     )
             if proc_debug:
@@ -70,6 +67,22 @@ def broadcast_queue_update():
             "total": len(jobs_list),
             "timestamp": datetime.utcnow().isoformat(),
         }
+
+        # Log a brief summary of fields that affect UI display (filename/size)
+        try:
+            summary = [
+                {
+                    "job_id": j.get("job_id"),
+                    "status": j.get("status"),
+                    "filename": j.get("filename"),
+                    "file_size": j.get("file_size"),
+                    "output_file_size": j.get("output_file_size"),
+                }
+                for j in jobs_list
+            ]
+            logger.info(f"[Broadcast] Queue items brief: {summary}")
+        except Exception:
+            pass
 
         # Get socketio instance and broadcast
         socketio = get_socketio_instance()

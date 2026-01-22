@@ -10,9 +10,9 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
-import mockData from "@/lib/mock-data.json"
 import type { UserDownload } from "@/types/user-download"
 import { FileConversionCard } from "./file-conversion-card"
+import { log } from "@/lib/logger"
 
 const getStatusStages = (currentStatus: string, hasError = false) => {
   if (hasError) {
@@ -29,15 +29,11 @@ interface MyDownloadsProps {
 }
 
 export function MyDownloads({ limit = 100 }: MyDownloadsProps) {
-  // Demo mode is opt-in; default to false when not explicitly set
-  const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true"
-
   const [downloads, setDownloads] = useState<UserDownload[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [downloadingFiles, setDownloadingFiles] = useState<Record<string, boolean>>({})
   const [totalCount, setTotalCount] = useState(0)
-  const [usingMockData, setUsingMockData] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
 
   useEffect(() => {
@@ -52,48 +48,31 @@ export function MyDownloads({ limit = 100 }: MyDownloadsProps) {
 
       const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8060"
 
-      try {
-        console.log("[v0] Attempting to fetch from localhost:8060...")
-        const response = await fetch(`${API_BASE_URL}/downloads?limit=${limit}&include_dismissed=true`, {
-          signal: AbortSignal.timeout(3000),
-        })
+      const response = await fetch(`${API_BASE_URL}/downloads?limit=${limit}&include_dismissed=true`, {
+        signal: AbortSignal.timeout(3000),
+      })
 
-        if (!response.ok) {
-          throw new Error(`API returned ${response.status}`)
-        }
-
-        const data = await response.json()
-        const downloadsData = (data.downloads || []).map((download: any) => ({
-          job_id: download.job_id,
-          original_filename: download.original_filename,
-          converted_filename: download.converted_filename,
-          device_profile: download.device_profile,
-          input_file_size: download.input_file_size,
-          output_file_size: download.output_file_size,
-          completed_at: download.completed_at,
-          actual_duration: download.actual_duration,
-          download_url: `${API_BASE_URL}${download.download_url}`,
-          status: download.status || "COMPLETE",
-          progress: download.progress || 100,
-        }))
-
-        console.log("[v0] Successfully fetched from localhost:8060", { count: downloadsData.length })
-        setDownloads(downloadsData)
-        setTotalCount(data.total || downloadsData.length)
-        setUsingMockData(false)
-      } catch (apiError) {
-        if (demoMode) {
-          console.log("[v0] API not reachable, using mock data (demo mode)", {
-            error: apiError instanceof Error ? apiError.message : String(apiError),
-          })
-          await new Promise((resolve) => setTimeout(resolve, 300))
-          setDownloads(mockData.myDownloads as UserDownload[])
-          setTotalCount(mockData.myDownloads.length)
-          setUsingMockData(true)
-        } else {
-          throw apiError
-        }
+      if (!response.ok) {
+        throw new Error(`API returned ${response.status}`)
       }
+
+      const data = await response.json()
+      const downloadsData = (data.downloads || []).map((download: any) => ({
+        job_id: download.job_id,
+        original_filename: download.original_filename,
+        converted_filename: download.converted_filename,
+        device_profile: download.device_profile,
+        input_file_size: download.input_file_size,
+        output_file_size: download.output_file_size,
+        completed_at: download.completed_at,
+        actual_duration: download.actual_duration,
+        download_url: `${API_BASE_URL}${download.download_url}`,
+        status: download.status || "COMPLETE",
+        progress: download.progress || 100,
+      }))
+
+      setDownloads(downloadsData)
+      setTotalCount(data.total || downloadsData.length)
     } catch (error) {
       console.error("[MyDownloads] Error fetching downloads:", error)
       setError(error instanceof Error ? error.message : "Failed to load downloads")
@@ -106,14 +85,7 @@ export function MyDownloads({ limit = 100 }: MyDownloadsProps) {
   const handleDownload = async (download: UserDownload) => {
     try {
       setDownloadingFiles((prev) => ({ ...prev, [download.job_id]: true }))
-
-      if (usingMockData) {
-        await new Promise((resolve) => setTimeout(resolve, 1500))
-        toast.success(`Mock download: ${download.converted_filename}`)
-        setDownloadingFiles((prev) => ({ ...prev, [download.job_id]: false }))
-        return
-      }
-
+      try { log("[UI] Starting download request", { job_id: download.job_id, filename: download.converted_filename }) } catch {}
       const response = await fetch(download.download_url!)
       if (!response.ok) {
         throw new Error(`Download failed: ${response.status}`)
@@ -125,6 +97,7 @@ export function MyDownloads({ limit = 100 }: MyDownloadsProps) {
       a.href = url
       a.download = download.converted_filename || `converted_${download.original_filename}`
       document.body.appendChild(a)
+      try { log("[UI] Starting browser download", { job_id: download.job_id, filename: download.converted_filename }) } catch {}
       a.click()
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
@@ -150,11 +123,6 @@ export function MyDownloads({ limit = 100 }: MyDownloadsProps) {
   }
 
   const handleDelete = async (download: UserDownload) => {
-    if (usingMockData && demoMode) {
-      toast.info(`Delete clicked for ${download.converted_filename}`)
-      return
-    }
-
     try {
       const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8060"
       const res = await fetch(`${API_BASE_URL}/downloads/${download.job_id}`, {
@@ -283,11 +251,7 @@ export function MyDownloads({ limit = 100 }: MyDownloadsProps) {
         </div>
         <CardDescription>
           {totalCount} completed conversion{totalCount !== 1 ? "s" : ""}
-          {usingMockData && demoMode && (
-            <Badge variant="outline" className="ml-2 text-xs">
-              Demo Mode
-            </Badge>
-          )}
+          
         </CardDescription>
       </CardHeader>
       <CardContent>

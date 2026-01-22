@@ -79,24 +79,12 @@ export function ConversionQueue({
   }, [])
 
   const [downloadingFiles, setDownloadingFiles] = useState<Record<string, boolean>>({})
-  const [jobUploadEtas, setJobUploadEtas] = useState<Map<string, number>>(new Map())
   const [jobUploadSpeeds, setJobUploadSpeeds] = useState<Map<string, number>>(new Map())
   const [jobSpeedHistories, setJobSpeedHistories] = useState<Map<string, number[]>>(new Map())
   const [jobLastSpeedEmit, setJobLastSpeedEmit] = useState<Map<string, number>>(new Map())
   const [jobUploadStartTimes, setJobUploadStartTimes] = useState<Map<string, number>>(new Map())
   const [jobLastUploadProgress, setJobLastUploadProgress] = useState<Map<string, number>>(new Map())
   const [jobLastUploadTime, setJobLastUploadTime] = useState<Map<string, number>>(new Map())
-  // PROCESSING ETA comes from backend; no local countdown
-  const [uploadEta, setUploadEta] = useState<number | undefined>(undefined)
-  const [displayedUploadRemainingSec, setDisplayedUploadRemainingSec] = useState<number | null>(null)
-  const [lastUploadProgress, setLastUploadProgress] = useState<number>(0)
-  const [lastUploadTime, setLastUploadTime] = useState<number>(Date.now())
-  const [uploadSpeed, setUploadSpeed] = useState<number>(0) // bytes per second
-  const [uploadStartTime, setUploadStartTime] = useState<number>(0)
-  const [lastEtaUpdateTime, setLastEtaUpdateTime] = useState<number>(0)
-  const [speedSampleCount, setSpeedSampleCount] = useState<number>(0)
-  const uploadJobIdRef = useRef<string>("unknown")
-  const lastLoggedUploadRemainingRef = useRef<number | null>(null)
 
   // Client-side PROCESSING ticker (based on backend-provided ETA at start)
   const [processingStartTime, setProcessingStartTime] = useState<number | null>(null)
@@ -123,10 +111,9 @@ export function ConversionQueue({
     const processingFile = pendingUploads.find((f) => f.status === "PROCESSING")
     const etaAtTop = (processingFile as any)?.eta_at
     const pp: any = (processingFile as any)?.processing_progress
-    const hasEtaAt = typeof etaAtTop === 'string' || (pp && typeof pp?.eta_at === 'string')
-    const etaAt = typeof etaAtTop === 'string' ? etaAtTop : pp?.eta_at
-    const hasEtaSec = pp && typeof pp?.projected_eta === 'number' && pp.projected_eta > 0
-    if ((hasEtaAt || hasEtaSec) && processingFile?.processing_at) {
+    const etaAt = typeof etaAtTop === 'string' ? etaAtTop : (pp && typeof pp?.eta_at === 'string' ? pp.eta_at : undefined)
+    const hasEtaAt = typeof etaAt === 'string'
+    if (hasEtaAt && processingFile?.processing_at) {
       // Initialize only once per processing phase to avoid Date.now()-driven loops
       if (processingStartTime == null) {
         // Calculate elapsed time based on processing_at timestamp
@@ -137,23 +124,17 @@ export function ConversionQueue({
 
         // Set start time based on when processing actually started
         setProcessingStartTime(processingAtMs)
-        if (hasEtaAt) {
-          const etaAtMs = new Date(etaAt as string).getTime()
-          const totalSec = Math.max(1, (etaAtMs - processingAtMs) / 1000)
-          setProcessingEtaSec(totalSec)
-        } else if (hasEtaSec) {
-          setProcessingEtaSec(pp.projected_eta)
-        }
+        const etaAtMs = new Date(etaAt as string).getTime()
+        const totalSec = Math.max(1, (etaAtMs - processingAtMs) / 1000)
+        setProcessingEtaSec(totalSec)
 
         // Calculate initial progress
-        const denom = hasEtaAt ? Math.max(1, (new Date(etaAt as string).getTime() - processingAtMs) / 1000) : pp.projected_eta
+        const denom = Math.max(1, (new Date(etaAt as string).getTime() - processingAtMs) / 1000)
         const initialProgress = Math.floor(Math.max(0, Math.min(99, (elapsedSec / denom) * 100)))
         setClientProcessingProgress(initialProgress)
 
         // Calculate remaining time
-        const initialRemaining = hasEtaAt
-          ? Math.max(0, Math.ceil((new Date(etaAt as string).getTime() - nowMs) / 1000))
-          : Math.max(0, Math.ceil(pp.projected_eta - elapsedSec))
+        const initialRemaining = Math.max(0, Math.ceil((new Date(etaAt as string).getTime() - nowMs) / 1000))
         setDisplayedRemainingSec(initialRemaining)
 
         // Track job id for logging
@@ -260,8 +241,8 @@ export function ConversionQueue({
   // Reset when status changes
   useEffect(() => {
     if (currentStatus === "COMPLETE") {
-      setUploadEta(undefined)
-      setLastUploadProgress(0)
+      // Clear per-job upload progress tracking when all work completes
+      setJobLastUploadProgress(new Map())
     }
 
     // Reset PROCESSING-specific state when leaving PROCESSING
@@ -277,128 +258,68 @@ export function ConversionQueue({
 
     // Reset UPLOADING-specific state when leaving UPLOADING
     if (currentStatus !== "UPLOADING") {
-      setUploadEta(undefined)
-      setLastUploadProgress(0)
-      setLastUploadTime(Date.now())
-      setSpeedSampleCount(0)
-    }
-  }, [currentStatus])
-
-  // Calculate upload ETA based on real-time upload speed (bytes per second)
-
-  useEffect(() => {
-    // Check both global status and per-file status
-    const uploadingFile = pendingUploads.find((f) => f.status === "UPLOADING")
-    const isUploading = currentStatus === "UPLOADING" || uploadingFile !== undefined
-
-    if (
-      isUploading &&
-      uploadingFile?.upload_progress?.percentage !== undefined &&
-      uploadingFile?.upload_progress?.percentage >= 0
-    ) {
-      const now = Date.now()
-      const jobId = uploadingFile.jobId || uploadingFile.job_id || "unknown"
-      const fileSize = uploadingFile.size
-      const uploadedBytes =
-        uploadingFile.upload_progress.uploaded_bytes || (uploadingFile.upload_progress.percentage / 100) * fileSize
-      const currentProgress = uploadingFile.upload_progress.percentage
-
-      // Initialize upload start time and progress tracking for this job
-      if (!jobUploadStartTimes.has(jobId) || jobUploadStartTimes.get(jobId) === 0) {
-        setJobUploadStartTimes((prev) => new Map(prev).set(jobId, now))
-        setJobLastUploadProgress((prev) => new Map(prev).set(jobId, currentProgress))
-        setJobLastUploadTime((prev) => new Map(prev).set(jobId, now))
-        // Resetting global trackers too for consistency if this is the primary uploader
-        if (uploadingFile === pendingUploads[0]) {
-          setUploadStartTime(now)
-          setLastUploadProgress(currentProgress)
-          setLastUploadTime(now)
-          setSpeedSampleCount(0)
-        }
-        return
-      }
-
-      const lastProgress = jobLastUploadProgress.get(jobId) || 0
-      const lastTime = jobLastUploadTime.get(jobId) || now
-      const progressDelta = currentProgress - lastProgress
-      const timeDelta = (now - lastTime) / 1000 // Convert to seconds
-
-      // Only update if we have meaningful progress (avoid noise from rapid updates)
-      if (progressDelta > 0.1 && timeDelta > 0.2) {
-        // Calculate instantaneous speed (bytes uploaded in this interval / time elapsed)
-        const bytesDelta = uploadedBytes - (lastProgress / 100) * fileSize
-        const instantSpeed = bytesDelta / timeDelta
-
-        // Use job-specific speed, fallback to global if necessary
-        // Accumulate instantaneous speed measurements for median calculation
-        setJobSpeedHistories((prev) => {
-          const next = new Map(prev)
-          const arr = next.get(jobId) ? [...(next.get(jobId) as number[])] : []
-          arr.push(instantSpeed)
-          while (arr.length > SPEED_MEDIAN_WINDOW) arr.shift()
-          next.set(jobId, arr)
-          return next
-        })
-        setJobLastUploadProgress((prev) => new Map(prev).set(jobId, currentProgress))
-        setJobLastUploadTime((prev) => new Map(prev).set(jobId, now))
-
-        // Also update global trackers if this is the primary uploader
-        if (uploadingFile === pendingUploads[0]) {
-          // Keep a rough instantaneous reading internally; UI uses median/5s cadence
-          setUploadSpeed(instantSpeed)
-          setLastUploadProgress(currentProgress)
-          setLastUploadTime(now)
-          setSpeedSampleCount((prev) => prev + 1)
-        }
-
-        // Speed and ETA publication handled by 5s cadence below
-      }
-    } else if (!isUploading) {
-      // Reset upload tracking when not uploading
-      setUploadStartTime(0)
-      setUploadSpeed(0)
-      setUploadEta(undefined)
-      setDisplayedUploadRemainingSec(null)
-      setSpeedSampleCount(0)
-      setJobUploadEtas(new Map())
-      setJobUploadSpeeds(new Map())
-      setJobUploadStartTimes(new Map())
       setJobLastUploadProgress(new Map())
       setJobLastUploadTime(new Map())
     }
-  }, [pendingUploads, currentStatus])
-
-  // Keep displayed upload ETA in sync when a fresh estimate arrives
+  }, [currentStatus])
+  // Upload speed tracking (ETA removed)
   useEffect(() => {
-    if (uploadEta && uploadEta > 0) {
-      setDisplayedUploadRemainingSec(uploadEta)
-    }
-  }, [uploadEta])
+    const now = Date.now()
+    pendingUploads.forEach((file) => {
+      if (file.status !== "UPLOADING" || !file.upload_progress) return
+      const jobId = file.jobId || ""
+      const uploadProgress = file.upload_progress?.percentage || 0
 
-  // Progressive upload ETA countdown (decrement by 1s each second)
-  useEffect(() => {
-    const uploadingFile = pendingUploads.find((f) => f.status === "UPLOADING")
-    const isUploading = currentStatus === "UPLOADING" || uploadingFile !== undefined
-    if (isUploading && displayedUploadRemainingSec != null) {
-      const interval = setInterval(() => {
-        setDisplayedUploadRemainingSec((prev) => {
-          if (prev == null) return prev
-          const next = Math.max(0, prev - 1)
-          // Log each decrement (logging disabled to reduce noise)
-          if (lastLoggedUploadRemainingRef.current == null || next !== lastLoggedUploadRemainingRef.current) {
-            lastLoggedUploadRemainingRef.current = next
-            // const jobId = uploadJobIdRef.current // Use global ref for now
-            // log(`[UI] Upload ETA tick: ${next}s remaining`, {
-            //   remaining_seconds: next,
-            //   job_id: jobId,
-            // })
+      // Initialize tracking for new uploads
+      if (uploadProgress === 0 && !jobUploadStartTimes.has(jobId)) {
+        setJobUploadStartTimes((prev) => new Map(prev).set(jobId, now))
+        setJobLastUploadProgress((prev) => new Map(prev).set(jobId, 0))
+        setJobLastUploadTime((prev) => new Map(prev).set(jobId, now))
+        setJobLastSpeedEmit((prev) => new Map(prev).set(jobId, 0))
+        setJobSpeedHistories((prev) => new Map(prev).set(jobId, []))
+        return
+      }
+
+      // Calculate instantaneous speed when progress changes
+      const lastProgress = jobLastUploadProgress.get(jobId) || 0
+      const lastTime = jobLastUploadTime.get(jobId) || now
+      if (uploadProgress > lastProgress && uploadProgress < 100) {
+        const timeDiff = (now - lastTime) / 1000 // seconds
+        const progressDiff = uploadProgress - lastProgress
+        if (timeDiff > 0 && progressDiff > 0) {
+          const totalBytes = file.size
+          const uploadedBytes = (progressDiff / 100) * totalBytes
+          const instSpeed = uploadedBytes / timeDiff
+
+          // Append sample to history
+          setJobSpeedHistories((prev) => {
+            const next = new Map(prev)
+            const arr = next.get(jobId) ? [...(next.get(jobId) as number[])] : []
+            arr.push(instSpeed)
+            while (arr.length > SPEED_MEDIAN_WINDOW) arr.shift()
+            next.set(jobId, arr)
+            return next
+          })
+
+          // Update last progress/time
+          setJobLastUploadProgress((prev) => new Map(prev).set(jobId, uploadProgress))
+          setJobLastUploadTime((prev) => new Map(prev).set(jobId, now))
+
+          // Publish every 5s using median of recent samples
+          const lastEmit = jobLastSpeedEmit.get(jobId) || 0
+          if (now - lastEmit >= SPEED_EMIT_INTERVAL_MS) {
+            const hist = jobSpeedHistories.get(jobId) || []
+            const med = median(hist)
+            setJobUploadSpeeds((prev) => new Map(prev).set(jobId, med))
+            setJobLastSpeedEmit((prev) => new Map(prev).set(jobId, now))
+            try {
+              if (med > 0) localStorage.setItem("upload_speed_bps", String(Math.floor(med)))
+            } catch {}
           }
-          return next
-        })
-      }, 1000)
-      return () => clearInterval(interval)
-    }
-  }, [currentStatus, pendingUploads])
+        }
+      }
+    })
+  }, [pendingUploads, jobLastSpeedEmit, jobSpeedHistories])
 
   useEffect(() => {
     const now = Date.now()
@@ -407,7 +328,6 @@ export function ConversionQueue({
       const jobId = file.jobId || ""
       const uploadProgress = file.upload_progress?.percentage || 0
       const uploadProgressConfirmed = (file.upload_progress as any)?.confirmed_percentage || uploadProgress
-      const eta = jobUploadEtas.get(jobId)
       const speed = jobUploadSpeeds.get(jobId) || 0
 
       // Initialize tracking for new uploads
@@ -454,11 +374,7 @@ export function ConversionQueue({
             const med = median(hist)
             setJobUploadSpeeds((prev) => new Map(prev).set(jobId, med))
 
-            const remainingBytes = totalBytes - uploadedBytes
-            const etaSeconds = med > 0 ? remainingBytes / med : 0
-            if (etaSeconds > 0 && etaSeconds < 3600) {
-              setJobUploadEtas((prev) => new Map(prev).set(jobId, Math.ceil(etaSeconds)))
-            }
+            // Remaining time can be computed ad-hoc if needed from speed and totalBytes
 
             setJobLastSpeedEmit((prev) => new Map(prev).set(jobId, now))
 
@@ -479,17 +395,15 @@ export function ConversionQueue({
       const jobId = file.jobId || ""
       const uploadProgress = file.upload_progress?.percentage || 0
       const uploadProgressConfirmed = (file.upload_progress as any)?.confirmed_percentage || uploadProgress
-      const eta = jobUploadEtas.get(jobId)
       const speed = jobUploadSpeeds.get(jobId) || 0
 
       return {
         uploadProgress,
         uploadProgressConfirmed,
-        eta,
         speed,
       }
     },
-    [jobUploadEtas, jobUploadSpeeds],
+    [jobUploadSpeeds],
   )
 
   const isJobRunning = (file: PendingUpload) => {
@@ -707,12 +621,11 @@ export function ConversionQueue({
       if (currentJobSpeed > 0) {
         label += ` (@${formatUploadSpeed(currentJobSpeed)})`
       }
-      const currentJobEta = jobUploadEtas.get(file.jobId || file.job_id || "")
       return {
         stage: 0,
         progress: safeUploadPct,
         label,
-        eta: currentJobEta ?? null,
+        eta: null,
         isError: false,
       }
     }
@@ -1264,11 +1177,10 @@ export function ConversionQueue({
 
         let uploadLabel = `Uploading - ${Math.round(safeUploadProgress)}%`
 
-        // Add ETA with speed in parentheses
-        if (uploadSpeed > 0 && uploadEta) {
-          uploadLabel += ` • ${formatTime(uploadEta)} remaining (@${formatUploadSpeed(uploadSpeed)})`
-        } else if (uploadSpeed > 0) {
-          uploadLabel += ` (@${formatUploadSpeed(uploadSpeed)})`
+        // Append current upload speed if known (no ETA)
+        {
+          const speed = jobUploadSpeeds.get(file.jobId || file.job_id || "") || 0
+          if (speed > 0) uploadLabel += ` (@${formatUploadSpeed(speed)})`
         }
 
         return {
@@ -1298,19 +1210,7 @@ export function ConversionQueue({
           }
         }
 
-        // Fallback: calculate progress based on processing_at and projected_eta
-        if (file.processing_progress?.projected_eta && file.processing_at) {
-          const processingAtMs = new Date(file.processing_at).getTime()
-          const nowMs = Date.now()
-          const elapsedSec = Math.max(0, (nowMs - processingAtMs) / 1000)
-          const projectedEta = file.processing_progress.projected_eta
-          const progress = Math.floor(Math.max(0, Math.min(99, (elapsedSec / projectedEta) * 100)))
-          return {
-            progress,
-            label: "Converting",
-            showProgress: true,
-          }
-        }
+        // No fallback to projected seconds
         return {
           progress: 0,
           label: "Converting",
@@ -1326,8 +1226,20 @@ export function ConversionQueue({
     if (!file.downloadId) return
 
     try {
+      try {
+        log("[UI] Download button clicked", {
+          id: file.jobId || (file as any).id,
+          filename: file.convertedName || file.name,
+        })
+      } catch {}
       setDownloadingFiles((prev) => ({ ...prev, [file.name]: true }))
 
+      try {
+        log("[UI] Starting download request", {
+          job_id: file.downloadId,
+          filename: file.convertedName || file.name,
+        })
+      } catch {}
       const response = await fetchWithLicense(`${apiUrl}/download/${file.downloadId}`)
       if (!response.ok) {
         const errText = await response.text()
@@ -1341,6 +1253,12 @@ export function ConversionQueue({
       a.href = url
       a.download = file.convertedName || file.name
       document.body.appendChild(a)
+      try {
+        log("[UI] Starting browser download", {
+          job_id: file.downloadId,
+          filename: file.convertedName || file.name,
+        })
+      } catch {}
       a.click()
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
@@ -1429,6 +1347,13 @@ export function ConversionQueue({
             <FileConversionCard
               key={(file as any).jobId || (file as any).id || file.name}
               file={file}
+              onDownload={async () => {
+                try {
+                  await downloadFile(file)
+                } catch (e) {
+                  // downloadFile already handles toasts/logging
+                }
+              }}
               onCancel={(id: string) => {
                 console.log("[Queue] Cancel clicked:", id, { filename: file.name, status: (file as any)?.status })
                 // Always cancel via endpoint if we have a backend job

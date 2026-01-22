@@ -1,5 +1,4 @@
 """
-FOSS MangaConverter Flask Application - Simplified version without auth/S3/analytics.
 """
 
 import logging
@@ -33,7 +32,7 @@ socketio = SocketIO(
 logger.info("SocketIO initialized with Redis message queue")
 
 app.config["MAX_CONTENT_LENGTH"] = int(
-    os.getenv("MAX_CONTENT_LENGTH", 1024 * 1024 * 1024)
+    os.getenv("MAX_UPLOAD_SIZE", os.getenv("MAX_CONTENT_LENGTH", 1024 * 1024 * 1024))
 )  # Default 1GB max upload size
 max_size_mb = app.config["MAX_CONTENT_LENGTH"] / (1024 * 1024)
 logger.info(f"Max upload size: {max_size_mb:.0f}MB")
