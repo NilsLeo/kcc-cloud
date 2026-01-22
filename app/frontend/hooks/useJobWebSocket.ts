@@ -39,10 +39,14 @@ export function useJobWebSocket(apiUrl: string): UseJobWebSocketReturn {
   const maxReconnectAttempts = 10
 
   useEffect(() => {
-    log(`[WebSocket] Initializing connection to ${apiUrl}`)
+    // Resolve final socket URL: default to same-origin when apiUrl is a relative API base like "/api"
+    const socketUrl = (typeof window !== 'undefined' && (apiUrl === '/api' || apiUrl.endsWith('/api'))) ? '' : apiUrl
+    log(`[WebSocket] Initializing connection to ${socketUrl || '(same-origin)'}`)
 
     // Create WebSocket connection
-    const newSocket = io(apiUrl, {
+    const newSocket = io(socketUrl || undefined, {
+      // Force the Socket.IO endpoint path; prevents "/api/socket.io" when apiUrl is "/api"
+      path: '/socket.io',
       transports: ['websocket', 'polling'], // Try WebSocket first, fallback to polling
       reconnection: true,
       reconnectionDelay: 1000,
