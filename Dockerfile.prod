@@ -111,6 +111,7 @@ ENV TZ=UTC \
     CELERY_BROKER_URL=redis://127.0.0.1:6379/0 \
     NEXT_PUBLIC_MAX_FILES=10 \
     CELERY_WORKERS=4 \
+    TMPDIR=/data/tmp \
     KCC_PATH=/opt/backend/kcc/kcc-c2e.py
 
 # Add kindlegen directory to PATH if mounted
