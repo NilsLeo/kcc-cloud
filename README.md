@@ -195,7 +195,7 @@ Access all your completed conversions with download links, file details, and the
    services:
      app:
        image: nilsleo/kcc-cloud:latest
-       container_name: mangaconverter-foss-app
+       container_name: kcc-cloud
        restart: unless-stopped
        ports:
          - "8080:80"
