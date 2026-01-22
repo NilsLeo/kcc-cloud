@@ -7,7 +7,7 @@ on:
       - 'feature/**'
 
 env:
-  IMAGE_NAME: nilsleo/kcc-web
+  IMAGE_NAME: nilsleo/kcc-cloud
 
 jobs:
   build-and-push:
@@ -20,6 +20,43 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
+
+      - name: Ensure Docker Hub repository exists
+        env:
+          DH_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+          DH_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          IMAGE: ${{ env.IMAGE_NAME }}
+        run: |
+          set -euo pipefail
+          NS="${IMAGE%%/*}"
+          REPO="${IMAGE##*/}"
+          echo "Ensuring Docker Hub repo exists: ${NS}/${REPO}"
+
+          JWT=$(curl -s -X POST -H 'Content-Type: application/json' \
+            -d "{\"username\":\"${DH_USER}\",\"password\":\"${DH_TOKEN}\"}" \
+            https://hub.docker.com/v2/users/login/ | \
+            python3 -c 'import sys,json; print(json.load(sys.stdin).get("token",""))')
+          if [ -z "$JWT" ]; then
+            echo "Failed to obtain Docker Hub JWT token" >&2
+            exit 1
+          fi
+
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' \
+            https://hub.docker.com/v2/repositories/${NS}/${REPO}/)
+          if [ "$STATUS" = "200" ]; then
+            echo "Repository already exists."
+            exit 0
+          fi
+
+          CREATE_STATUS=$(curl -s -o /dev/null -w '%{http_code}' -X POST \
+            -H "Authorization: JWT ${JWT}" -H 'Content-Type: application/json' \
+            -d "{\"namespace\":\"${NS}\",\"name\":\"${REPO}\",\"is_private\":false}" \
+            https://hub.docker.com/v2/repositories/)
+          if [ "$CREATE_STATUS" != "201" ] && [ "$CREATE_STATUS" != "202" ]; then
+            echo "Failed to create repository (${CREATE_STATUS})" >&2
+            exit 1
+          fi
+          echo "Repository created."
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
