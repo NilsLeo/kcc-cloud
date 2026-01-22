@@ -23,10 +23,9 @@
 
 </div>
 
----
+
 
 <!-- TABLE OF CONTENTS -->
-<details>
   <summary>📑 Table of Contents</summary>
   <ol>
     <li><a href="#-overview">Overview</a></li>
@@ -39,9 +38,8 @@
     <li><a href="#-acknowledgments">Acknowledgments</a></li>
     <!-- <li><a href="#-star-history">Star History</a></li> -->
   </ol>
-</details>
 
----
+
 
 ## 📖 Overview
 
@@ -65,7 +63,7 @@ This project is powered by **[Kindle Comic Converter (KCC)](https://github.com/c
 While KCC's desktop GUI is fantastic, this web-based alternative offers compelling advantages for modern workflows:
 
 | Benefit | Description |
-|---------|-------------|
+|------|-------------|
 | **Multi-Device Access** | Access the converter from any device—desktop, tablet, or smartphone—via your browser |
 | **Simultaneous Processing** | Celery worker pool enables parallel conversion of multiple files, significantly faster than sequential GUI processing |
 | **One-Time Setup** | Deploy once with Docker Compose, then access from anywhere on your network—no repeated installations |
@@ -76,7 +74,7 @@ While KCC's desktop GUI is fantastic, this web-based alternative offers compelli
 | **Job History** | Persistent database tracks all conversions, redownload files anytime |
 
 
----
+
 ## 📱 Usage
 
 ### Basic Conversion
@@ -142,7 +140,7 @@ Access all your completed conversions with download links, file details, and the
 
 ![Downloads history page](docs/images/screenshot-downloads.gif)
  
----
+
 
 ## 🏗️ Architecture
 
@@ -170,7 +168,7 @@ Access all your completed conversions with download links, file details, and the
   <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS" />
 </p>
 
----
+
 
  
 
@@ -243,7 +241,7 @@ Then apply the change:
 docker compose up -d
 ```
 
----
+
 
 ## ⚙️ Configuration
 
@@ -252,7 +250,7 @@ docker compose up -d
 Key configuration options in `.env`:
 
 | Variable | Default | Description |
-|----------|---------|-------------|
+|-------|---------|-------------|
 | `CELERY_CONCURRENCY` | 2 | Jobs per worker container |
 | `NEXT_PUBLIC_MAX_FILES` | 10 | Max simultaneous uploads |
 | `NEXT_PUBLIC_MAX_FILE_SIZE` | 1GB | Max single file size |
@@ -277,13 +275,13 @@ docker compose up -d --scale celery-worker=10
 CELERY_CONCURRENCY=1          # Single job per worker
 ```
 
----
+
 
 ## 🤝 Contributing
 
 We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
----
+
 
 ## 📄 License
 
@@ -296,14 +294,14 @@ Special thanks to:
 - **[Ciro Mattia Gonano](https://github.com/ciromattia)** and **[Paweł Jastrzębski](https://github.com/darodi)** for creating Kindle Comic Converter
 - The open-source community for all the amazing libraries and tools
 
----
+
 <!-- STAR HISTORY - Uncomment when you have some stars! -->
 <!--
 ## ⭐ Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=nilsleo/kcc-cloud&type=Date)](https://star-history.com/#nilsleo/kcc-cloud&Date)
 
----
+
 -->
 
 <div align="center">
