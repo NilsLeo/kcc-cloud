@@ -13,7 +13,7 @@ redis==5.1
 # flower==2.0.1  # Optional: Celery monitoring UI
 
 # WebSocket support (optional, can be removed for polling-only)
-eventlet==0.35.2
+eventlet==0.40.3
 flask-socketio==5.3.6
 python-socketio==5.11.0
 
