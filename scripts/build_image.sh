@@ -48,7 +48,7 @@ if [[ ${#TAGS[@]} -eq 0 ]]; then
   else
     SHORT_SHA="local"
   fi
-  TAGS=("nilsleo/kcc-web:${SHORT_SHA}")
+  TAGS=("nilsleo/kcc-cloud:${SHORT_SHA}")
 fi
 
 echo "Context: $CTX"
