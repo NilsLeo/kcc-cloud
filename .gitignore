@@ -71,6 +71,10 @@ dmypy.json
 celerybeat-schedule
 celerybeat.pid
 
+# Jupyter notebooks (ignore everywhere)
+**/*.ipynb
+**/.ipynb_checkpoints/
+
 # Node.js / Frontend
 node_modules/
 npm-debug.log*

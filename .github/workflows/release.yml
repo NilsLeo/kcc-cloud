@@ -78,6 +78,12 @@ jobs:
             --build-arg NEXT_PUBLIC_API_URL=/api \
             --build-arg NEXT_PUBLIC_MAX_FILES=10
 
+      - name: Force fresh 'latest' digest
+        run: |
+          # Rebuild latest without cache to force a new image digest
+          docker build --no-cache -t ${{ env.IMAGE_NAME }}:latest -f Dockerfile.prod .
+          docker push ${{ env.IMAGE_NAME }}:latest
+
       - name: Create Git tag
         run: |
           git config user.name "github-actions[bot]"
