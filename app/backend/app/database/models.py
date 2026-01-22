@@ -176,6 +176,15 @@ DATABASE_URL = os.getenv(
 )
 
 # Create database engine for SQLite
+# If using a file-based SQLite URL, ensure the parent directory exists
+try:
+    if DATABASE_URL.startswith("sqlite:///") and ":memory:" not in DATABASE_URL:
+        db_file = DATABASE_URL.replace("sqlite:///", "", 1)
+        parent = os.path.dirname(db_file) or "."
+        os.makedirs(parent, exist_ok=True)
+except Exception:
+    # Directory create best-effort; permission issues will be raised by engine.connect()
+    pass
 engine = create_engine(
     DATABASE_URL,
     echo=False,  # Set to True for SQL debugging

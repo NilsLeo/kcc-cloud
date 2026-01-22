@@ -13,5 +13,9 @@ envsubst '${MAX_UPLOAD_SIZE_MB}' < /etc/nginx/conf.d/default.conf.template > /et
 # Test nginx config
 nginx -t
 
+# Ensure application data directory exists and is writable by appuser
+mkdir -p /data
+chown -R appuser:appuser /data || true
+
 # Start supervisord
 exec /usr/bin/supervisord -n
