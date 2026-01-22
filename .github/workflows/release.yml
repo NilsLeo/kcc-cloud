@@ -11,6 +11,9 @@ env:
 jobs:
   release:
     runs-on: ubuntu-latest
+    concurrency:
+      group: release-main
+      cancel-in-progress: true
     permissions:
       contents: write
       packages: write
@@ -35,9 +38,14 @@ jobs:
           MINOR=$(echo $VERSION | cut -d. -f2)
           PATCH=$(echo $VERSION | cut -d. -f3)
 
-          # Increment patch version
+          # Increment patch version and ensure the tag does not already exist
           NEW_PATCH=$((PATCH + 1))
           NEW_VERSION="v${MAJOR}.${MINOR}.${NEW_PATCH}"
+          # Bump until unique
+          while git rev-parse -q --verify "refs/tags/${NEW_VERSION}" >/dev/null; do
+            NEW_PATCH=$((NEW_PATCH + 1))
+            NEW_VERSION="v${MAJOR}.${MINOR}.${NEW_PATCH}"
+          done
 
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "📦 Previous version: $LATEST_TAG"
@@ -84,12 +92,17 @@ jobs:
           docker build --no-cache -t ${{ env.IMAGE_NAME }}:latest -f Dockerfile.prod .
           docker push ${{ env.IMAGE_NAME }}:latest
 
-      - name: Create Git tag
+      - name: Create Git tag (skip if exists)
         run: |
+          TAG="${{ steps.get_version.outputs.new_version }}"
+          if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+            echo "Tag ${TAG} already exists, skipping creation."
+            exit 0
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a ${{ steps.get_version.outputs.new_version }} -m "Release ${{ steps.get_version.outputs.new_version }}"
-          git push origin ${{ steps.get_version.outputs.new_version }}
+          git tag -a "${TAG}" -m "Release ${TAG}"
+          git push origin "${TAG}"
 
       - name: Generate release notes
         id: release_notes
