@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  IMAGE_NAME: nilsleo/kcc-web
+  IMAGE_NAME: nilsleo/kcc-cloud
 
 jobs:
   release:
