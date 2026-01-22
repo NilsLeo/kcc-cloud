@@ -154,7 +154,8 @@ services:
       args:
         USER_ID: ${PUID:-1000}
         GROUP_ID: ${PGID:-1000}
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL_PROD:-http://localhost:8080}
+        # Use same-origin API via container nginx (mapped at /api)
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL_PROD:-/api}
         NEXT_PUBLIC_MAX_FILES: ${NEXT_PUBLIC_MAX_FILES:-10}
     restart: unless-stopped
     ports:

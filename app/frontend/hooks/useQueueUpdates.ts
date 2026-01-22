@@ -107,7 +107,7 @@ export function useQueueUpdates(enabled = true) {
       socket.disconnect()
       socketRef.current = null
     }
-  }, [enabled, API_BASE_URL, IS_DEV])
+  }, [enabled, SOCKET_URL, IS_DEV])
 
   const refresh = useCallback(() => {
     if (socketRef.current?.connected) {
