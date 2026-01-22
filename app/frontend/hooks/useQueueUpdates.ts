@@ -36,15 +36,20 @@ export function useQueueUpdates(enabled = true) {
   const [error, setError] = useState<string | null>(null)
 
   const socketRef = useRef<Socket | null>(null)
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8060'
+  // For WebSocket, prefer same-origin unless NEXT_PUBLIC_SOCKET_URL is set
+  // Using NEXT_PUBLIC_API_URL (e.g. "/api") would incorrectly target "/api/socket.io"
+  // which isn't upgraded by nginx. So default to same-origin Socket.IO endpoint.
+  const SOCKET_URL = (process.env.NEXT_PUBLIC_SOCKET_URL || '').trim()
 
   useEffect(() => {
     if (!enabled) return
 
-    if (IS_DEV) console.log('[WEBSOCKET] Connecting to', API_BASE_URL)
+    if (IS_DEV) console.log('[WEBSOCKET] Connecting to', SOCKET_URL || '(same-origin)')
     setIsConnecting(true)
 
-    const socket = io(API_BASE_URL, {
+    const socket = io(SOCKET_URL || undefined, {
+      // Explicitly set path to avoid "/api/socket.io" when API base is "/api"
+      path: '/socket.io',
       transports: ['websocket'],
       reconnection: true,
       reconnectionDelay: 1000,

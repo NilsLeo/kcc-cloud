@@ -159,6 +159,7 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
 
   // Initialize WebSocket for queue status updates
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8060"
+  const wsUrl = (process.env.NEXT_PUBLIC_SOCKET_URL || '').trim()
   const {
     queueStatus,
     isPolling: isConnecting,
@@ -172,7 +173,7 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
     subscribeToJob,
     unsubscribeFromJob, // Imported unsubscribeFromJob
     jobStatuses, // Added jobStatuses from useJobWebSocket hook
-  } = useJobWebSocket(apiUrl)
+  } = useJobWebSocket(wsUrl || apiUrl)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const completionToastsShown = useRef<Set<string>>(new Set()) // Track which jobs have shown completion toast
