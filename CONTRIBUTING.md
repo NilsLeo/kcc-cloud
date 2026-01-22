@@ -206,18 +206,18 @@ feature/* → develop → main (auto-release)
 ### Release Process
 
 1. **Development** happens on `feature/*` branches → merge to `develop`
-   - CI builds Docker image: `nilsleo/kcc-web:feature-name`
+   - CI builds Docker image: `nilsleo/kcc-cloud:feature-name`
 
 2. **Integration testing** on `develop` branch
-   - Every push builds: `nilsleo/kcc-web:develop`
+   - Every push builds: `nilsleo/kcc-cloud:develop`
 
 3. **Production release** - merge `develop` → `main`
    - **Automatically**:
      - Increments patch version (e.g., `v1.2.3` → `v1.2.4`)
      - Builds and pushes Docker images:
-       - `nilsleo/kcc-web:v1.2.4`
-       - `nilsleo/kcc-web:latest`
-       - `nilsleo/kcc-web:stable`
+       - `nilsleo/kcc-cloud:v1.2.4`
+       - `nilsleo/kcc-cloud:latest`
+       - `nilsleo/kcc-cloud:stable`
      - Creates Git tag `v1.2.4`
      - Creates GitHub Release with auto-generated changelog
 
