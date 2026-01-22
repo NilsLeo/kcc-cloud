@@ -20,7 +20,7 @@ import { DeviceSelector } from "./device-selector"
 import { Label } from "@/components/ui/label"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { useConverterMode } from "@/contexts/converter-mode-context"
-import { useQueuePolling, type QueueJob } from "@/hooks/useQueuePolling"
+import { useQueueUpdates, type QueueJob } from "@/hooks/useQueueUpdates"
 import { useJobWebSocket } from "@/hooks/useJobWebSocket" // Imported JobStatusData
 import { cn } from "@/lib/utils" // Imported cn for conditional styling
 import { DownloadsPreviewCard } from "./downloads-preview-card" // Import DownloadsPreviewCard instead of using MyDownloads inline
@@ -43,7 +43,6 @@ export type PendingUpload = {
   queuedAt?: number // Timestamp when job entered QUEUED status (for calculating download progress)
   processing_progress?: {
     eta_at?: string
-    projected_eta?: number
   }
   eta_at?: string
   processing_at?: string
@@ -55,7 +54,7 @@ export type PendingUpload = {
     percentage: number
     confirmed_percentage?: number // Added confirmed percentage
   }
-  worker_download_speed_mbps?: number // Worker download speed for simulating Reading File stage
+  // worker_download_speed_mbps removed (legacy)
   downloadUrl?: string // URL for downloading the converted file
 }
 
@@ -102,7 +101,6 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
   const { mode, setMode } = useConverterMode() // Added setMode here
   const isManga = mode === "manga"
   const isComic = mode === "comic"
-  // FOSS version - no user authentication
 
   const [pendingUploads, setPendingUploads] = useState<PendingUpload[]>([])
   const [selectedProfile, setSelectedProfile] = useState<string>("Placeholder")
@@ -165,8 +163,7 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
     queueStatus,
     isPolling: isConnecting,
     error: wsError,
-  } = useQueuePolling(
-    undefined,
+  } = useQueueUpdates(
     true, // always listen when component is mounted
   )
 
@@ -245,11 +242,12 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
     if (queueStatus.jobs.length > 0) {
       log(`[WEBSOCKET] Received ${queueStatus.jobs.length} job(s):`)
       queueStatus.jobs.forEach((job: QueueJob) => {
-        const pp = (job as any).processing_progress
         log(`  - Job ${job.job_id}: ${job.status} | ${job.filename}`, {
+          filename: job.filename,
+          file_size: (job as any).file_size,
+          output_file_size: (job as any).output_file_size,
           completed_at: job.completed_at || null,
-          eta_at: (job as any).eta_at ?? pp?.eta_at,
-          projected_eta: pp?.projected_eta,
+          eta_at: (job as any).eta_at,
           processing_at: (job as any).processing_at,
         })
       })
@@ -276,7 +274,7 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
             ;(reconciled as any).processing_at = (job as any).processing_at
             ;(reconciled as any).eta_at = (job as any).eta_at
             reconciled.upload_progress = job.upload_progress
-            reconciled.worker_download_speed_mbps = job.worker_download_speed_mbps
+            // legacy worker download speed removed
 
             const next = [...prev]
             next[candidateIndex] = reconciled
@@ -322,8 +320,10 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
             processing_progress: job.processing_progress,
             eta_at: (job as any).eta_at,
             processing_at: (job as any).processing_at,
+            inputFileSize: job.file_size,
+            outputFileSize: (job as any).output_file_size,
             upload_progress: job.upload_progress,
-            worker_download_speed_mbps: job.worker_download_speed_mbps,
+            // legacy worker download speed removed
             error: job.status === "ERRORED" ? true : undefined,
           }
 
@@ -333,6 +333,7 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
             newUpload.convertedName = job.output_filename || job.filename // Use output filename if available
             newUpload.downloadId = job.job_id
             newUpload.convertedTimestamp = job.completed_at ? new Date(job.completed_at).getTime() : Date.now()
+            newUpload.outputFileSize = (job as any).output_file_size
             return [...prev, newUpload]
           }
 
@@ -383,7 +384,7 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
               processing_at: (job as any).processing_at ?? (f as any).processing_at,
               eta_at: (job as any).eta_at ?? (f as any).eta_at,
               upload_progress: mergedUploadProgress,
-              worker_download_speed_mbps: job.worker_download_speed_mbps,
+              // legacy worker download speed removed
               // Set queuedAt timestamp when job first enters QUEUED status
               queuedAt: job.status === "QUEUED" && f.status !== "QUEUED" ? Date.now() : f.queuedAt,
               // Set error flag for ERRORED jobs
@@ -397,6 +398,8 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
               updated.convertedName = job.output_filename || job.filename // Use output filename if available
               updated.downloadId = job.job_id
               updated.convertedTimestamp = job.completed_at ? new Date(job.completed_at).getTime() : Date.now()
+              ;(updated as any).outputFileSize = (job as any).output_file_size ?? (updated as any).outputFileSize
+              ;(updated as any).inputFileSize = job.file_size ?? (updated as any).inputFileSize
 
               // Only show toast if just completed (within last 10s) and not yet shown
               // Suppress completion toast
@@ -483,7 +486,7 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
               status: statusData.status,
               processing_progress: statusData.processing_progress,
               upload_progress: statusData.upload_progress,
-              worker_download_speed_mbps: statusData.worker_download_speed_mbps,
+              // legacy worker download speed removed
               // Set queuedAt timestamp when job first enters QUEUED status
               queuedAt: statusData.status === "QUEUED" && f.status !== "QUEUED" ? Date.now() : f.queuedAt,
             }
@@ -565,7 +568,6 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
     }
   }
 
-  // FOSS version: No dismiss tracking needed
 
   // WebSocket-based job monitoring
   const startJobMonitoring = (jobId: string, filename: string) => {
@@ -754,7 +756,6 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
       // Removed loading toast during conversion
 
       try {
-        // FOSS version - no session management
 
         // Reset progress states for this file
         // </CHANGE> Removed shared progress states, now handled per job
@@ -764,7 +765,7 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
         // setConversionProgress(0)
         // setEta(undefined)
         // setRemainingTime(undefined)
-        setCurrentStatus(undefined) // Will be set by first status poll
+        setCurrentStatus(undefined) // Will be set by first status update
         lastLoggedProgressRef.current = -1 // Reset progress logging
         maxUploadProgressRef.current = 0 // Reset max upload progress for this file
 
@@ -904,7 +905,7 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
 
         // Wait for upload to complete and capture server-assigned job id
         const uploadCompletePromise = uploadPromise
-        log(`Job ${jobId} submitted; polling will track progress`)
+        log(`Job ${jobId} submitted; session updates will track progress`)
 
         const { job_id: serverJobId } = await uploadCompletePromise
 
@@ -1291,7 +1292,6 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
 
         {/* Converted list removed */}
 
-        {/* FOSS version - no signup required, no user downloads tracking */}
 
         <DownloadsPreviewCard />
 

@@ -19,15 +19,3 @@ class TestLocalStorage:
         assert filename in expected_structure
         assert job_id in expected_structure
 
-    def test_file_size_calculation(self):
-        """Test file size calculation (when file exists)."""
-        # This would test actual file size calculation
-        # Placeholder showing the testing pattern
-        pass
-
-    @pytest.mark.skip(reason="Requires actual S3 credentials")
-    def test_s3_upload(self):
-        """Test S3 upload functionality."""
-        # This would test S3 uploads but requires credentials
-        # Skipped for now, shows testing pattern
-        pass

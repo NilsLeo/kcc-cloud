@@ -36,19 +36,17 @@ WORKDIR /opt/app
 ARG USER_ID=1000
 ARG GROUP_ID=1000
 
-# System packages:
-# - python3/pip for backend
-# - build-essential and headers for native deps
-# - redis-server for broker
-# - nginx for reverse proxy
-# - supervisor to manage multiple processes
-# - image/archiving tools required by the app
+# System packages in two stages: build deps, then runtime deps only
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 python3-pip python3-venv \
+    # Build dependencies (will be removed)
     build-essential gcc libffi-dev python3-dev libev-dev \
-    redis-server nginx supervisor \
+    # Runtime dependencies (kept)
+    python3 python3-pip python3-venv \
+    redis-server nginx supervisor gettext-base \
     p7zip-full unar poppler-utils unrar-free \
-  && rm -rf /var/lib/apt/lists/*
+  && rm -rf /var/lib/apt/lists/* \
+  && rm -f /etc/nginx/sites-enabled/default \
+  && rm -f /etc/nginx/conf.d/*.conf
 
 # Create non-root user and data dir
 RUN set -ex; \
@@ -77,27 +75,34 @@ RUN mkdir -p /data && chown appuser:appuser /data
 # Copy backend source
 COPY app/backend/app /opt/backend
 
-# Python deps
+# Python deps - install then remove build dependencies
 ENV PIP_DEFAULT_TIMEOUT=1000
 RUN pip3 install --break-system-packages --upgrade pip && \
     pip3 install --break-system-packages --no-cache-dir -r /opt/backend/requirements.txt && \
     if [ -f /opt/backend/kcc/requirements.txt ]; then \
         pip3 install --break-system-packages --no-cache-dir -r /opt/backend/kcc/requirements.txt; \
-    fi
+    fi && \
+    # Remove build dependencies to save ~1-2GB
+    apt-get purge -y --auto-remove build-essential gcc libffi-dev python3-dev libev-dev && \
+    rm -rf /var/lib/apt/lists/*
 
 # Copy frontend build output (Next.js standalone)
+# Standalone mode bundles only what's needed - no need for full node_modules
 WORKDIR /opt/frontend
 COPY --from=frontend-builder /app/public ./public
 COPY --from=frontend-builder /app/.next/standalone ./
 COPY --from=frontend-builder /app/.next/static ./.next/static
-COPY --from=frontend-builder /app/node_modules ./node_modules
 
-# Nginx config (reverse proxy to Next (3000) and Backend (8060))
+# Nginx config template (reverse proxy to Next (3000) and Backend (8060))
 WORKDIR /opt/app
-COPY infra/nginx.conf /etc/nginx/conf.d/default.conf
+COPY infra/nginx.conf /etc/nginx/conf.d/default.conf.template
 
 # Supervisor config
 COPY infra/supervisord.conf /etc/supervisor/conf.d/app.conf
+
+# Entrypoint script to process nginx template
+COPY infra/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Environment defaults (can be overridden by docker-compose)
 ENV TZ=UTC \
@@ -105,7 +110,8 @@ ENV TZ=UTC \
     DATABASE_URL=sqlite:////data/jobs.db \
     CELERY_BROKER_URL=redis://127.0.0.1:6379/0 \
     NEXT_PUBLIC_MAX_FILES=10 \
-    CELERY_WORKERS=3
+    CELERY_WORKERS=4 \
+    KCC_PATH=/opt/backend/kcc/kcc-c2e.py
 
 # Add kindlegen directory to PATH if mounted
 ENV PATH=$PATH:/usr/local/bin:/opt/backend/kindlegen
@@ -116,5 +122,5 @@ EXPOSE 80
 # Ensure proper permissions
 RUN chown -R appuser:appuser /opt/backend /opt/frontend
 
-# Start all services
-CMD ["/usr/bin/supervisord", "-n"]
+# Start all services via entrypoint (processes nginx template first)
+CMD ["/usr/local/bin/entrypoint.sh"]

@@ -8,7 +8,6 @@ export interface JobStatus {
   upload_progress_bytes?: number
   upload_progress_formatted?: string
   progress_percent?: number
-  projected_eta?: number
   elapsed_seconds?: number
   remaining_seconds?: number
   download_url?: string

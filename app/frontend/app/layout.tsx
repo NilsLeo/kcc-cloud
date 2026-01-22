@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "sonner"
 import { ConverterModeProvider } from "@/contexts/converter-mode-context"
 import { ErrorBoundary } from "@/components/error-boundary"
+import { InitGlobals } from "@/components/init-globals"
 
 // Avoid network fetches for Google Fonts in dev containers by relying on local fonts
 // If you need Google fonts, switch back to next/font/google and ensure outbound network is available
@@ -90,7 +91,6 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
         <head>
-          {/* Favicon and PWA icons (RealFaviconGenerator) */}
           <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
           <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
           <link rel="shortcut icon" href="/favicon.ico" />
@@ -111,9 +111,18 @@ export default function RootLayout({
           <meta name="theme-color" content="hsl(var(--theme-medium))" />
         </head>
         <body className={`${zenMaruGothic.variable} ${poppins.variable} antialiased`}>
+          {/* Define legacy globals as early as possible to avoid ReferenceError from cached bundles */}
+          <script
+            id="legacy-globals"
+            dangerouslySetInnerHTML={{
+              __html:
+                "window.lastUploadProgress=window.lastUploadProgress||0;window.setLastUploadProgress=window.setLastUploadProgress||function(v){window.lastUploadProgress=v};",
+            }}
+          />
           <ErrorBoundary>
             <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
               <ConverterModeProvider>
+                <InitGlobals />
                 {children}
                 <Toaster richColors position="top-center" />
               </ConverterModeProvider>

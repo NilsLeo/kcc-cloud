@@ -1,1 +1,0 @@
-# KCC Cloud Frontend

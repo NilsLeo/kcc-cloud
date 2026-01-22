@@ -14,7 +14,6 @@ const HomePage: FC = () => {
   const contentType = mode === "manga" ? "manga" : "comic"
   const themeClass = mode === "manga" ? "manga-theme" : "comic-theme"
 
-  // FOSS version - no session tracking needed
 
   return (
     <div className={`min-h-screen bg-background flex flex-col ${themeClass}`}>

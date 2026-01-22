@@ -6,6 +6,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { toast } from "@/hooks/use-toast"
 import { AlertCircle, Check, Download, Trash2, Upload, Settings, Clock, MoreVertical } from "lucide-react"
 import { useState } from "react"
+import { log } from "@/lib/logger"
 
 interface FileConversionCardProps {
   file: {
@@ -14,6 +15,9 @@ interface FileConversionCardProps {
     job_id?: string
     name: string
     size?: number
+    inputFileSize?: number
+    outputFileSize?: number
+    convertedName?: string
     status: string
     upload_progress?: {
       percentage: number
@@ -21,7 +25,6 @@ interface FileConversionCardProps {
     }
     processing_progress?: {
       eta_at?: string
-      projected_eta?: number
     }
     processing_at?: string
     error?: string
@@ -60,7 +63,7 @@ export function FileConversionCard({
       }
     }
 
-    if (status === "ERROR") {
+    if (status === "ERROR" || status === "ERRORED") {
       return {
         bg: "bg-destructive/10",
         text: "text-destructive",
@@ -118,6 +121,20 @@ export function FileConversionCard({
     return `${Math.round(mb)} MB`
   }
 
+  const getDisplayedSize = () => {
+    const out = (file as any).outputFileSize as number | undefined
+    const inp = (file as any).inputFileSize as number | undefined
+    const up = (file as any).upload_progress as any
+    const upTotal = up?.total_bytes as number | undefined
+    const upUploaded = up?.uploaded_bytes as number | undefined
+    if (file.status === "COMPLETE" && out && out > 0) return out
+    if (file.size && file.size > 0) return file.size
+    if (inp && inp > 0) return inp
+    if (upTotal && upTotal > 0) return upTotal
+    if (upUploaded && upUploaded > 0) return upUploaded
+    return undefined
+  }
+
   const computeProcessingPct = () => {
     const pp: any = (file as any).processing_progress
     const startedAt = (file as any).processing_at
@@ -133,12 +150,7 @@ export function FileConversionCard({
       const pct = Math.floor((elapsed / total) * 100)
       return Math.max(0, Math.min(99, pct))
     }
-    if (pp && pp.projected_eta && pp.projected_eta > 0) {
-      const eta = Number(pp.projected_eta)
-      const elapsedSec = Math.max(0, (Date.now() - startedMs) / 1000)
-      const pct = Math.floor((elapsedSec / eta) * 100)
-      return Math.max(0, Math.min(99, pct))
-    }
+    // No fallback to projected seconds; rely on timestamps only
     return 0
   }
 
@@ -149,7 +161,7 @@ export function FileConversionCard({
     if (file.status === "PROCESSING") {
       return computeProcessingPct()
     }
-    if (file.status === "COMPLETE" || file.status === "ERROR") {
+    if (file.status === "COMPLETE" || file.status === "ERROR" || file.status === "ERRORED") {
       return 100
     }
     return 0
@@ -163,14 +175,20 @@ export function FileConversionCard({
     if (file.status === "PROCESSING") {
       return computeProcessingPct()
     }
-    if (file.status === "COMPLETE" || file.status === "ERROR") {
+    if (file.status === "COMPLETE" || file.status === "ERROR" || file.status === "ERRORED") {
       return 100
     }
     return 0
   }
 
   const handleDownload = async () => {
-    if (file.status === "ERROR") {
+    // Log button click regardless of status
+    try {
+      const id = (file as any).jobId || (file as any).job_id || (file as any).id
+      log("[UI] Download button clicked", { id, filename: file.name, status: file.status, context })
+    } catch {}
+
+    if (file.status === "ERROR" || file.status === "ERRORED") {
       toast({
         title: "Download unavailable",
         description: "File can't be downloaded due to an error in conversion process.",
@@ -204,6 +222,10 @@ export function FileConversionCard({
     }
 
     if (onDownload) {
+      try {
+        const id = (file as any).jobId || (file as any).job_id || (file as any).id
+        log("[UI] Initiating download", { id, filename: file.name })
+      } catch {}
       await onDownload(file)
     }
   }
@@ -235,7 +257,7 @@ export function FileConversionCard({
         title: "Cancelled",
         description: `${file.name} has been cancelled.`,
       })
-    } else if (file.status === "ERROR" && onCancel) {
+    } else if ((file.status === "ERROR" || file.status === "ERRORED") && onCancel) {
       console.log("[Card] Remove clicked (error):", (file as any).jobId || file.id, { filename: file.name, status: file.status })
       onCancel(((file as any).jobId || file.id) as string)
       toast({
@@ -255,14 +277,14 @@ export function FileConversionCard({
   const getTrashButtonLabel = () => {
     if (file.status === "COMPLETE") return context === 'downloads' ? "Delete" : "Remove"
     if (file.status === "UPLOADING" || file.status === "PROCESSING") return "Cancel"
-    if (file.status === "ERROR") return "Remove"
+    if (file.status === "ERROR" || file.status === "ERRORED") return "Remove"
     if (file.status === "QUEUED") return "Cancel"
     return "Cancel"
   }
 
   const renderStages = () => {
     const isComplete = file.status === "COMPLETE"
-    const isError = file.status === "ERROR"
+    const isError = file.status === "ERROR" || file.status === "ERRORED"
     const isQueued = file.status === "QUEUED"
     const isProcessing = file.status === "PROCESSING"
     const isUploading = file.status === "UPLOADING"
@@ -347,7 +369,7 @@ export function FileConversionCard({
   const uploadProgress = getUploadProgress()
   const processingProgress = getProcessingProgress()
   const isComplete = file.status === "COMPLETE"
-  const isError = file.status === "ERROR"
+    const isError = file.status === "ERROR" || file.status === "ERRORED"
   const isUploading = file.status === "UPLOADING"
   const isProcessing = file.status === "PROCESSING"
   const isQueued = file.status === "QUEUED"
@@ -413,10 +435,10 @@ export function FileConversionCard({
                   </span>
                 </div>
                 <div className="flex items-center gap-2 max-w-full overflow-hidden">
-                  <p className="text-sm text-muted-foreground shrink-0 md:hidden">{formatFileSizeMobile(file.size)}</p>
+                  <p className="text-sm text-muted-foreground shrink-0 md:hidden">{formatFileSizeMobile(getDisplayedSize())}</p>
                   {file.device && <p className="text-sm text-muted-foreground truncate md:hidden">{file.device}</p>}
                   <p className="text-sm text-muted-foreground truncate hidden md:block">
-                    {formatFileSize(file.size)}
+                    {formatFileSize(getDisplayedSize())}
                     {file.device && (
                       <>
                         {" • "}
@@ -447,25 +469,48 @@ export function FileConversionCard({
                     ) : (
                       <Check className={`h-3 w-3 ${isComplete ? statusColors.text : "text-muted-foreground/50"}`} />
                     )}
-                    {/* Progress bar for mobile */}
+                    {/* Circular progress for mobile */}
                     <div className="flex items-center gap-1 ml-1 shrink-0">
-                      <div className="relative h-1.5 w-12 overflow-hidden rounded-full bg-muted shrink-0">
-                        {/* Upload layer (lighter purple) underneath */}
-                        <div
-                          className="absolute left-0 top-0 h-full bg-[hsl(var(--theme-lightest))] transition-all duration-300"
-                          style={{ width: `${uploadProgress}%` }}
-                        />
-                        {/* Processing layer (darker) on top */}
-                        <div
-                          className={`absolute left-0 top-0 h-full transition-all duration-300 ${
-                            isComplete || isError || isProcessing ? statusColors.progressBar : "bg-transparent"
-                          }`}
-                          style={{ width: `${processingProgress}%` }}
-                        />
-                      </div>
                       <span className="text-xs font-medium text-muted-foreground tabular-nums w-9 text-right shrink-0">
                         {Math.round(progressPercentage)}%
                       </span>
+                      <svg className="h-5 w-5 shrink-0 -rotate-90" viewBox="0 0 20 20">
+                        {/* Background circle */}
+                        <circle
+                          cx="10"
+                          cy="10"
+                          r="8"
+                          fill="none"
+                          className="stroke-muted"
+                          strokeWidth="2"
+                        />
+                        {/* Upload progress layer (lighter) */}
+                        <circle
+                          cx="10"
+                          cy="10"
+                          r="8"
+                          fill="none"
+                          className="stroke-[hsl(var(--theme-lightest))] transition-all duration-300"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeDasharray={`${(uploadProgress / 100) * 2 * Math.PI * 8} ${2 * Math.PI * 8}`}
+                        />
+                        {/* Processing progress layer (darker, on top) */}
+                        <circle
+                          cx="10"
+                          cy="10"
+                          r="8"
+                          fill="none"
+                          className={`transition-all duration-300 ${
+                            isComplete || isError || isProcessing 
+                              ? isComplete ? "stroke-success" : isError ? "stroke-destructive" : "stroke-[hsl(var(--theme-medium))]"
+                              : "stroke-transparent"
+                          }`}
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeDasharray={`${(processingProgress / 100) * 2 * Math.PI * 8} ${2 * Math.PI * 8}`}
+                        />
+                      </svg>
                     </div>
                   </div>
                 </div>

@@ -1,8 +1,9 @@
 """
 Celery configuration for MangaConverter task queue.
 
-This module configures Celery to use Redis as the message broker and PostgreSQL
-as the result backend for distributed task processing.
+Uses Redis as the message broker. Result backend is not required because
+job state is tracked via Redis job store + WebSocket updates and persisted in
+SQLite by the application, so the legacy DATABASE_* backend is removed.
 """
 
 import os
@@ -13,15 +14,12 @@ from kombu import Queue, Exchange
 # Default to localhost for development, override in production
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
 
-# PostgreSQL backend for task results
-# Uses the same database connection as the main application
-DATABASE_URL = os.getenv("DATABASE_PUBLIC_URL")
-
 # Initialize Celery application
 celery_app = Celery(
     "mangaconverter",
     broker=CELERY_BROKER_URL,
-    backend=f"db+{DATABASE_URL}" if DATABASE_URL else None,
+    # No separate result backend; state is tracked via Redis job store
+    backend=None,
 )
 
 # --------------------------
