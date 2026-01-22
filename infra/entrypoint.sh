@@ -14,7 +14,7 @@ envsubst '${MAX_UPLOAD_SIZE_MB}' < /etc/nginx/conf.d/default.conf.template > /et
 nginx -t
 
 # Ensure application data directory exists and is writable by appuser
-mkdir -p /data
+mkdir -p /data /data/tmp
 chown -R appuser:appuser /data || true
 
 # Start supervisord

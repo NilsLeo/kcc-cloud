@@ -18,7 +18,9 @@ app = Flask(__name__)
 logger.info("Flask application initialized")
 
 redis_url = os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0")
-socketio_cors = os.getenv("SOCKETIO_CORS_ORIGINS", "*")
+# Default Socket.IO CORS to '*' unless explicitly set
+_socketio_env = os.getenv("SOCKETIO_CORS_ORIGINS", "").strip()
+socketio_cors = _socketio_env if _socketio_env else "*"
 logger.info(f"Connecting to Redis message queue: {redis_url}")
 logger.info(f"SocketIO CORS origins: {socketio_cors}")
 socketio = SocketIO(
@@ -38,7 +40,12 @@ max_size_mb = app.config["MAX_CONTENT_LENGTH"] / (1024 * 1024)
 logger.info(f"Max upload size: {max_size_mb:.0f}MB")
 
 # CORS configuration
-allowed_origins = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "*").split(",")]
+# Default HTTP CORS to '*' unless explicitly set
+_allowed_env = os.getenv("ALLOWED_ORIGINS", "").strip()
+if not _allowed_env or _allowed_env == "*":
+    allowed_origins = ["*"]
+else:
+    allowed_origins = [o.strip() for o in _allowed_env.split(",") if o.strip()]
 logger.info(f"CORS allowed origins: {allowed_origins}")
 
 CORS(
