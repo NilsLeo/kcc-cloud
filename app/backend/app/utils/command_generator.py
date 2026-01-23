@@ -51,7 +51,23 @@ def generate_command(options: Dict[str, Any], job_id: str = None, user_id: str =
     output_dir = options.get("output_dir", "")
     # Use session_key as fallback before defaulting to a UUID
     device_profile = options.get("device_profile", "")
-    advanced_options = options.get("advanced_options", {})
+    advanced_options = options.get("advanced_options", {}) or {}
+
+    # Determine sensible default output format when not explicitly provided
+    # - Kindle family (K*) defaults to MOBI (AZW3)
+    # - Kobo family (Ko*) defaults to EPUB (KEPUB by default unless --nokepub)
+    # - OTHER/unknown: leave as-is (frontend/validation handles requirements)
+    try:
+        of = (advanced_options.get("output_format") or "").strip()
+        if not of or of.upper() == "AUTO":
+            dp = (device_profile or "").strip()
+            if dp.startswith("K"):  # Kindle profiles: K1, K2, K34, KPW, KV, KPW5, KO, KS, etc.
+                advanced_options["output_format"] = "MOBI"
+            elif dp.startswith("Ko"):  # Kobo profiles: KoA, KoF, KoL, etc.
+                advanced_options["output_format"] = "EPUB"
+            # else: leave output_format unspecified
+    except Exception:
+        pass
 
     # Start with base command
     command = [

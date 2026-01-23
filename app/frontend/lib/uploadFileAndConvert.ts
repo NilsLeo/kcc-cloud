@@ -46,7 +46,9 @@ export async function uploadFileAndConvert(
 
   const formData = new FormData()
   formData.append('file', file)
-  formData.append('device_profile', deviceProfile)
+  if (deviceProfile && deviceProfile !== 'Placeholder') {
+    formData.append('device_profile', deviceProfile)
+  }
   formData.append('job_id', jobId)
   for (const [key, value] of Object.entries(options)) {
     if (value !== undefined && value !== null) formData.append(key, String(value))
@@ -58,6 +60,7 @@ export async function uploadFileAndConvert(
     try {
       const xhr = new XMLHttpRequest()
       activeXhrs.set(jobId, xhr)
+      let aborted = false
 
       xhr.open('POST', `${apiUrl}/jobs`)
 
@@ -81,13 +84,19 @@ export async function uploadFileAndConvert(
         reject(new Error('Upload failed'))
       }
       xhr.onabort = () => {
+        aborted = true
         activeXhrs.delete(jobId)
-        reject(new Error('Upload aborted'))
+        // Normalize cancellation reason so UI can detect and suppress error state
+        reject(new Error('Upload cancelled'))
       }
 
       xhr.onreadystatechange = () => {
         if (xhr.readyState !== XMLHttpRequest.DONE) return
         const status = xhr.status
+        // If this request was intentionally aborted, ignore final state change
+        if (aborted || status === 0) {
+          return
+        }
         try {
           const result = JSON.parse(xhr.responseText || '{}')
           if (status >= 200 && status < 300) {

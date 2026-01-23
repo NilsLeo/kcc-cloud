@@ -256,6 +256,14 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
       log(`[WEBSOCKET] Received empty queue`)
     }
 
+    // Helper to normalize filenames so backend-sanitized names (underscored) match local originals
+    const normalizeName = (n: string | undefined | null) =>
+      (n || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/gi, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_|_$/g, '')
+
     // Process all jobs from WebSocket session update
     queueStatus.jobs.forEach((job: QueueJob) => {
       setPendingUploads((prev) => {
@@ -264,8 +272,12 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
 
         // If not found, reconcile a likely local placeholder (same name/size, uploading or missing id)
         if (!existingFile) {
+          const jobNameNorm = normalizeName(job.filename)
           const candidateIndex = prev.findIndex(
-            (f) => (!f.jobId || f.status === "UPLOADING") && f.name === job.filename && f.size === job.file_size,
+            (f) =>
+              (!f.jobId || f.status === "UPLOADING") &&
+              normalizeName(f.name) === jobNameNorm &&
+              f.size === job.file_size,
           )
           if (candidateIndex !== -1) {
             const reconciled = { ...prev[candidateIndex] }
@@ -617,12 +629,7 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
   }
 
   const areSettingsValid = () => {
-    // Check if device is selected
-    if (selectedProfile === "Placeholder") {
-      return false
-    }
-
-    // If device is OTHER, validate required fields
+    // Device selection is optional. Only validate when profile is OTHER.
     if (selectedProfile === "OTHER") {
       if (
         !advancedOptions.customWidth ||
@@ -648,11 +655,7 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
 
   const handleApplySettings = () => {
     if (!areSettingsValid()) {
-      if (selectedProfile === "Placeholder") {
-        toast.warning("No device selected", {
-          description: "Please select your E-Reader device.",
-        })
-      } else if (selectedProfile === "OTHER") {
+      if (selectedProfile === "OTHER") {
         toast.warning("Missing required settings", {
           description:
             "Custom width, height, and output format (not 'Auto') are required when using 'Other' device profile.",
@@ -682,14 +685,6 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
     if (filesToConvert.length === 0) {
       toast.info("All files already converted", {
         description: "These files have already been converted. Add new files to convert more.",
-      })
-      return
-    }
-
-    if (selectedProfile === "Placeholder") {
-      setNeedsConfiguration(true)
-      toast.warning("No device selected", {
-        description: "Please select your E-Reader device before starting the conversion.",
       })
       return
     }
@@ -912,16 +907,41 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
 
         // Reconcile local jobId with server-assigned job_id so WebSocket updates match
         if (serverJobId && serverJobId !== jobId) {
-          setPendingUploads((prev) =>
-            prev.map((f) =>
-              f.jobId === jobId
-                ? {
-                    ...f,
-                    jobId: serverJobId,
-                  }
-                : f,
-            ),
-          )
+          setPendingUploads((prev) => {
+            const next = [...prev]
+            const oldIdx = next.findIndex((f) => f.jobId === jobId)
+            if (oldIdx === -1) return prev
+
+            // Update local placeholder with server-assigned job_id
+            next[oldIdx] = { ...next[oldIdx], jobId: serverJobId }
+
+            // If a WebSocket-discovered entry already exists with the same server job_id, merge and dedupe
+            const dupeIdx = next.findIndex((f, idx) => idx !== oldIdx && f.jobId === serverJobId)
+            if (dupeIdx !== -1) {
+              const primary = next[oldIdx]
+              const dupe = next[dupeIdx]
+              // Prefer any richer fields from the dupe (e.g., early status from WS), but keep file/name from primary
+              next[oldIdx] = {
+                ...primary,
+                status: (dupe as any).status ?? primary.status,
+                processing_progress: (dupe as any).processing_progress ?? (primary as any).processing_progress,
+                processing_at: (dupe as any).processing_at ?? (primary as any).processing_at,
+                eta_at: (dupe as any).eta_at ?? (primary as any).eta_at,
+                upload_progress: (dupe as any).upload_progress ?? (primary as any).upload_progress,
+                isConverted: (dupe as any).isConverted ?? (primary as any).isConverted,
+                convertedName: (dupe as any).convertedName ?? (primary as any).convertedName,
+                downloadId: (dupe as any).downloadId ?? (primary as any).downloadId,
+                convertedTimestamp: (dupe as any).convertedTimestamp ?? (primary as any).convertedTimestamp,
+                outputFileSize: (dupe as any).outputFileSize ?? (primary as any).outputFileSize,
+                inputFileSize: (dupe as any).inputFileSize ?? (primary as any).inputFileSize,
+                error: (dupe as any).error ?? (primary as any).error,
+              } as any
+              // Remove duplicate entry
+              next.splice(dupeIdx, 1)
+            }
+
+            return next
+          })
           log("Reconciled local jobId with server job_id", serverJobId, {
             old_job_id: jobId,
             new_job_id: serverJobId,
@@ -957,7 +977,9 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
           actualErrorMessage.includes("cancelled by user") ||
           actualErrorMessage.includes("Upload cancelled") ||
           actualErrorMessage.includes("Upload aborted") ||
-          actualErrorMessage.includes("Job cancelled")
+          actualErrorMessage.includes("Job cancelled") ||
+          // Some browsers report status 0 after abort; treat as cancellation
+          actualErrorMessage.includes("Upload failed: 0")
         ) {
           log("[v0] Job cancelled by user, cleaning up...")
           log("Job cancelled by user", jobId, { filename: currentFile.name })
@@ -1200,11 +1222,9 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
 
   const getProgress = () => {
     const hasFiles = pendingUploads.length > 0
-    const hasDevice = selectedProfile !== "Placeholder"
     if (!hasFiles) return 0
-    if (hasFiles && !hasDevice) return 33
-    if (hasFiles && hasDevice) return 66
-    return 100
+    // Device selection is optional; simple two-step indicator
+    return 66
   }
 
   const [isButtonSticky, setIsButtonSticky] = useState(false)
