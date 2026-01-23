@@ -224,8 +224,9 @@ Download the Linux version from [archive.org/details/kindlegen](https://archive.
 
 ```bash
 mkdir -p ./volumes/kindlegen
-# Copy or extract kindlegen binary to this folder
-chmod +x ./volumes/kindlegen/kindlegen
+cd ./volumes/kindlegen
+wget https://dn710205.ca.archive.org/0/items/kindlegen/kindlegen
+chmod +x kindlegen
 ```
 
 The volume mount in docker-compose.yml will make it available to KCC.
