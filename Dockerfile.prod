@@ -42,11 +42,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential gcc libffi-dev python3-dev libev-dev \
     # Runtime dependencies (kept)
     python3 python3-pip python3-venv \
-    redis-server nginx supervisor gettext-base \
+    redis-server supervisor \
     p7zip-full unar poppler-utils unrar-free \
-  && rm -rf /var/lib/apt/lists/* \
-  && rm -f /etc/nginx/sites-enabled/default \
-  && rm -f /etc/nginx/conf.d/*.conf
+  && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user and data dir
 RUN set -ex; \
@@ -93,14 +91,10 @@ COPY --from=frontend-builder /app/public ./public
 COPY --from=frontend-builder /app/.next/standalone ./
 COPY --from=frontend-builder /app/.next/static ./.next/static
 
-# Nginx config template (reverse proxy to Next (3000) and Backend (8060))
-WORKDIR /opt/app
-COPY infra/nginx.conf /etc/nginx/conf.d/default.conf.template
-
 # Supervisor config
 COPY infra/supervisord.conf /etc/supervisor/conf.d/app.conf
 
-# Entrypoint script to process nginx template
+# Entrypoint script
 COPY infra/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
@@ -117,11 +111,11 @@ ENV TZ=UTC \
 # Add kindlegen directory to PATH if mounted
 ENV PATH=$PATH:/usr/local/bin:/opt/backend/kindlegen
 
-# Expose HTTP
-EXPOSE 80
+# Expose app ports directly (Next.js 3000, backend 8060)
+EXPOSE 3000 8060
 
 # Ensure proper permissions
 RUN chown -R appuser:appuser /opt/backend /opt/frontend
 
-# Start all services via entrypoint (processes nginx template first)
+# Start all services via entrypoint
 CMD ["/usr/local/bin/entrypoint.sh"]
