@@ -5,7 +5,7 @@ services:
       context: ./app/frontend
       dockerfile: Dockerfile.dev
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8060}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api}
     container_name: kcc-cloud-frontend-dev
     restart: unless-stopped
     user: "0:0"
@@ -17,7 +17,11 @@ services:
       - TZ=${TZ:-UTC}
       - HOME=/app
       - XDG_CACHE_HOME=/app/.cache
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8060}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-/api}
+      # For WebSocket: set to accessible backend URL (e.g., http://192.168.178.60:8060)
+      - NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_WS_URL:-}
+      # Backend URL for Next.js rewrites (Docker service name in dev)
+      - BACKEND_URL=http://backend:8060
       - NEXT_PUBLIC_MAX_FILES=${NEXT_PUBLIC_MAX_FILES:-10}
       - CHOKIDAR_USEPOLLING=true
       - WATCHPACK_POLLING=true
@@ -45,12 +49,13 @@ services:
     volumes:
       - ./app/backend/app:/app
       - conversion-data:/data
+      - ./volumes/kindlegen:/app/kindlegen:ro
     user: "${PUID:-1000}:${PGID:-1000}"
     environment:
       - TZ=${TZ:-UTC}
       - DATABASE_URL=sqlite:////data/jobs.db
       - STORAGE_PATH=/data
-      - ALLOWED_ORIGINS=http://localhost:3000,http://localhost
+      - ALLOWED_ORIGINS=*
       - FLASK_ENV=${FLASK_ENV:-production}
       - FLASK_DEBUG=${FLASK_DEBUG:-0}
       - GUNICORN_TIMEOUT=${GUNICORN_TIMEOUT:-600}
@@ -96,6 +101,7 @@ services:
     volumes:
       - ./app/backend/app:/app
       - conversion-data:/data
+      - ./volumes/kindlegen:/app/kindlegen:ro
     environment:
       - TZ=${TZ:-UTC}
       - CELERY_BROKER_URL=redis://redis:6379/0

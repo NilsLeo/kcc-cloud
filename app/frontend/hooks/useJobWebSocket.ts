@@ -39,9 +39,13 @@ export function useJobWebSocket(apiUrl: string): UseJobWebSocketReturn {
   const maxReconnectAttempts = 10
 
   useEffect(() => {
-    // Resolve final socket URL: default to same-origin when apiUrl is a relative API base like "/api"
-    const socketUrl = (typeof window !== 'undefined' && (apiUrl === '/api' || apiUrl.endsWith('/api'))) ? '' : apiUrl
-    log(`[WebSocket] Initializing connection to ${socketUrl || '(same-origin)'}`)
+    // Check for explicit WebSocket URL first (for dev when accessing from different machine)
+    // Note: NEXT_PUBLIC_* env vars are inlined at compile time by Next.js
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL
+    log(`[WEBSOCKET] NEXT_PUBLIC_WS_URL = "${wsUrl}"`)
+    // Resolve final socket URL: use explicit WS_URL, or same-origin when apiUrl is relative
+    const socketUrl = wsUrl || ((typeof window !== 'undefined' && (apiUrl === '/api' || apiUrl.endsWith('/api'))) ? '' : apiUrl)
+    log(`[WEBSOCKET] Connecting to ${socketUrl || '(same-origin)'}`)
 
     // Create WebSocket connection
     const newSocket = io(socketUrl || undefined, {

@@ -159,7 +159,7 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
 
   // Initialize WebSocket for queue status updates
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8060"
-  const wsUrl = (process.env.NEXT_PUBLIC_SOCKET_URL || '').trim()
+  const wsUrl = (process.env.NEXT_PUBLIC_WS_URL || '').trim()
   const {
     queueStatus,
     isPolling: isConnecting,
