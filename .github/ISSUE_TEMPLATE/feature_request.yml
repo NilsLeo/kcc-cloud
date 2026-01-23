@@ -1,0 +1,34 @@
+name: Feature request
+description: Suggest an idea or improvement
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues to avoid duplicates
+          required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What problem would this feature solve?
+      placeholder: Describe the pain point or use case
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: How would you like it to work?
+      placeholder: Describe the feature at a high level
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context (optional)
+      description: Alternatives considered, screenshots, or links
+

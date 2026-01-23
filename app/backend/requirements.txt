@@ -1,0 +1,34 @@
+Flask==2.0.1
+Flask-Cors==3.0.10
+Flask-SocketIO==5.3.6
+python-socketio==5.11.1
+eventlet==0.33.3
+Werkzeug==2.0.1
+boto3==1.26.137
+python-dotenv==0.19.0
+SQLAlchemy==1.4.23
+psutil==5.8.0
+python-jose==3.3.0
+
+# Celery task queue dependencies (Phase 1)
+celery==5.3.4
+redis==5.0.1
+
+flower==2.0.1  # Celery monitoring dashboard (Phase 3)
+speedtest-cli==2.1.3  # Network speed testing for dynamic download speed measurement
+
+# Page counting dependencies
+PyMuPDF==1.23.8  # PDF page counting (fitz)
+rarfile==4.1  # RAR/CBR archive support
+py7zr==0.20.8  # 7Z/CB7 archive support
+
+pytest==7.4.3
+pytest-cov==4.1.0
+pytest-mock==3.12.0
+pytest-flask==1.3.0
+watchdog==3.0.0  # Filesystem event monitoring for real-time progress
+
+black==23.12.1
+flake8==7.0.0
+mypy==1.8.0
+isort==5.13.2

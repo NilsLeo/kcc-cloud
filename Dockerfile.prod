@@ -1,0 +1,127 @@
+###############################################
+# Single-container production image
+# - Builds Next.js frontend (standalone)
+# - Installs and runs Flask backend (gunicorn + eventlet)
+# - Runs Celery worker
+# - Runs Redis broker
+# - All processes managed by Supervisor
+###############################################
+
+# 1) Build frontend
+FROM node:20-slim AS frontend-builder
+ARG NEXT_PUBLIC_API_URL=/api
+ARG NEXT_PUBLIC_MAX_FILES
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ENV NEXT_PUBLIC_MAX_FILES=${NEXT_PUBLIC_MAX_FILES}
+
+RUN npm i -g pnpm
+WORKDIR /app
+
+COPY app/frontend/package.json app/frontend/pnpm-lock.yaml ./
+RUN pnpm install --no-frozen-lockfile \
+ && pnpm next telemetry disable || true
+
+COPY app/frontend .
+RUN pnpm build
+
+
+# 2) Final runtime with Node + Python + system deps
+FROM node:20-slim AS runtime
+
+ENV DEBIAN_FRONTEND=noninteractive
+WORKDIR /opt/app
+
+# Optional UID/GID for non-root user
+ARG USER_ID=1000
+ARG GROUP_ID=1000
+
+# System packages in two stages: build deps, then runtime deps only
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # Build dependencies (will be removed)
+    build-essential gcc libffi-dev python3-dev libev-dev git \
+    # Runtime dependencies (kept)
+    python3 python3-pip python3-venv \
+    redis-server supervisor nginx \
+    p7zip-full unar poppler-utils unrar-free \
+  && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user and data dir
+RUN set -ex; \
+    # Handle group - create or rename existing
+    if ! getent group ${GROUP_ID} >/dev/null 2>&1; then \
+        groupadd -g ${GROUP_ID} appuser; \
+    else \
+        EXISTING_GROUP=$(getent group ${GROUP_ID} | cut -d: -f1); \
+        if [ "$EXISTING_GROUP" != "appuser" ]; then \
+            groupmod -n appuser "$EXISTING_GROUP"; \
+        fi; \
+    fi; \
+    # Handle user - create or rename existing
+    if ! getent passwd ${USER_ID} >/dev/null 2>&1; then \
+        useradd -u ${USER_ID} -g appuser -s /bin/bash -m appuser; \
+    else \
+        EXISTING_USER=$(getent passwd ${USER_ID} | cut -d: -f1); \
+        if [ "$EXISTING_USER" != "appuser" ]; then \
+            usermod -l appuser -d /home/appuser -m "$EXISTING_USER"; \
+            usermod -g appuser appuser; \
+        fi; \
+    fi
+
+RUN mkdir -p /data && chown appuser:appuser /data
+
+# Copy backend source (excluding kcc submodule which we'll clone fresh)
+COPY app/backend/app /opt/backend
+
+# Clone KCC (Kindle Comic Converter) - ensures submodule is always available
+RUN rm -rf /opt/backend/kcc && \
+    git clone --depth 1 https://github.com/ciromattia/kcc.git /opt/backend/kcc
+
+# Python deps - install then remove build dependencies
+ENV PIP_DEFAULT_TIMEOUT=1000
+RUN pip3 install --break-system-packages --upgrade pip && \
+    pip3 install --break-system-packages --no-cache-dir -r /opt/backend/requirements.txt && \
+    if [ -f /opt/backend/kcc/requirements.txt ]; then \
+        pip3 install --break-system-packages --no-cache-dir -r /opt/backend/kcc/requirements.txt; \
+    fi && \
+    # Remove build dependencies to save ~1-2GB
+    apt-get purge -y --auto-remove build-essential gcc libffi-dev python3-dev libev-dev git && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy frontend build output (Next.js standalone)
+# Standalone mode bundles only what's needed - no need for full node_modules
+WORKDIR /opt/frontend
+COPY --from=frontend-builder /app/public ./public
+COPY --from=frontend-builder /app/.next/standalone ./
+COPY --from=frontend-builder /app/.next/static ./.next/static
+
+# Supervisor config
+COPY infra/supervisord.conf /etc/supervisor/conf.d/app.conf
+
+# Nginx config
+COPY infra/nginx.conf /etc/nginx/nginx.conf
+
+# Entrypoint script
+COPY infra/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# Environment defaults (can be overridden by docker-compose)
+ENV TZ=UTC \
+    STORAGE_PATH=/data \
+    DATABASE_URL=sqlite:////data/jobs.db \
+    CELERY_BROKER_URL=redis://127.0.0.1:6379/0 \
+    NEXT_PUBLIC_MAX_FILES=10 \
+    CELERY_WORKERS=4 \
+    TMPDIR=/data/tmp \
+    KCC_PATH=/opt/backend/kcc/kcc-c2e.py
+
+# Add kindlegen directory to PATH if mounted
+ENV PATH=$PATH:/usr/local/bin:/opt/backend/kindlegen
+
+# Expose nginx on port 80 (proxies to Next.js 3000 and backend 8060)
+EXPOSE 80
+
+# Ensure proper permissions
+RUN chown -R appuser:appuser /opt/backend /opt/frontend
+
+# Start all services via entrypoint
+CMD ["/usr/local/bin/entrypoint.sh"]

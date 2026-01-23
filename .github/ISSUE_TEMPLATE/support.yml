@@ -1,0 +1,26 @@
+name: Support / Question
+description: Ask a question or request help
+title: "[Question]: "
+labels: [question]
+body:
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues/discussions
+          required: true
+  - type: textarea
+    id: question
+    attributes:
+      label: What do you need help with?
+      description: Be concise but include key details
+      placeholder: Your question or the issue you’re facing
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Details (optional)
+      description: Steps tried, environment, screenshots, or links
+

@@ -1,0 +1,164 @@
+# Environment files
+.env
+.env.local
+.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+*.manifest
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+.pytype/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+celerybeat-schedule
+celerybeat.pid
+
+# Jupyter notebooks (ignore everywhere)
+**/*.ipynb
+**/.ipynb_checkpoints/
+
+# Node.js / Frontend
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.pnpm-store/
+.npm
+.eslintcache
+.node_repl_history
+*.tgz
+.yarn-integrity
+
+# Next.js
+.next/
+out/
+.vercel
+.turbo
+next-env.d.ts
+
+# Logs
+*.log
+logs/
+dev-logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Docker
+.docker/
+*.pid
+*.seed
+*.pid.lock
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
+pgdata/
+
+# Object Storage / Volumes
+volumes/
+minio/data/
+*.tmp
+.crush/
+
+# Proprietary binaries (kindlegen binary files only, keep README)
+backend/app/kindlegen/kindlegen
+**/kindlegen/kindlegen
+app/backend/app/kindlegen/kindlegen
+
+# Testing
+coverage/
+.nyc_output
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Build artifacts
+dist/
+build/
+*.bundle.js
+*.bundle.js.map
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*~.nib
+local.properties
+
+# Sentry
+.sentryclirc
+.sentry-native-symbolicator
+
+# Misc
+.cache/
+.parcel-cache/
+.terraform/
+*.tfstate
+*.tfstate.backup

@@ -1,0 +1,3 @@
+[submodule "app/backend/app/kcc"]
+	path = app/backend/app/kcc
+	url = https://github.com/ciromattia/kcc.git

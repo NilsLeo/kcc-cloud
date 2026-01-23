@@ -1,0 +1,138 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  IMAGE_NAME: nilsleo/kcc-cloud
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: release-main
+      cancel-in-progress: true
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Get latest tag
+        id: get_version
+        run: |
+          # Get the latest tag, default to v0.0.0 if none exists
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+
+          # Parse version numbers
+          VERSION=${LATEST_TAG#v}
+          MAJOR=$(echo $VERSION | cut -d. -f1)
+          MINOR=$(echo $VERSION | cut -d. -f2)
+          PATCH=$(echo $VERSION | cut -d. -f3)
+
+          # Increment patch version and ensure the tag does not already exist
+          NEW_PATCH=$((PATCH + 1))
+          NEW_VERSION="v${MAJOR}.${MINOR}.${NEW_PATCH}"
+          # Bump until unique
+          while git rev-parse -q --verify "refs/tags/${NEW_VERSION}" >/dev/null; do
+            NEW_PATCH=$((NEW_PATCH + 1))
+            NEW_VERSION="v${MAJOR}.${MINOR}.${NEW_PATCH}"
+          done
+
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Previous version: $LATEST_TAG"
+          echo "🚀 New version: $NEW_VERSION"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ steps.get_version.outputs.new_version }}
+            type=raw,value=latest
+            type=raw,value=stable
+            type=sha
+
+      - name: Build and push Docker image
+        run: |
+          TAGS="${{ steps.meta.outputs.tags }}"
+          ARGS=""
+          while IFS= read -r t; do
+            [ -z "$t" ] && continue
+            ARGS="$ARGS --tag $t"
+          done <<< "$TAGS"
+          bash ./scripts/build_image.sh --context . --file Dockerfile.prod --platform linux/amd64 --push $ARGS \
+            --build-arg NEXT_PUBLIC_API_URL=/api \
+            --build-arg NEXT_PUBLIC_MAX_FILES=10
+
+      - name: Force fresh 'latest' digest
+        run: |
+          # Rebuild latest without cache to force a new image digest
+          docker build --no-cache -t ${{ env.IMAGE_NAME }}:latest -f Dockerfile.prod .
+          docker push ${{ env.IMAGE_NAME }}:latest
+
+      - name: Create Git tag (skip if exists)
+        run: |
+          TAG="${{ steps.get_version.outputs.new_version }}"
+          if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+            echo "Tag ${TAG} already exists, skipping creation."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "${TAG}" -m "Release ${TAG}"
+          git push origin "${TAG}"
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          PREVIOUS_TAG="${{ steps.get_version.outputs.latest_tag }}"
+          NEW_TAG="${{ steps.get_version.outputs.new_version }}"
+
+          echo "## What's Changed" > release_notes.md
+          echo "" >> release_notes.md
+
+          if [ "$PREVIOUS_TAG" != "v0.0.0" ]; then
+            git log ${PREVIOUS_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges >> release_notes.md
+          else
+            git log HEAD --pretty=format:"- %s (%h)" --no-merges >> release_notes.md
+          fi
+
+          echo "" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "## Docker Images" >> release_notes.md
+          echo "" >> release_notes.md
+          echo '```bash' >> release_notes.md
+          echo "docker pull ${{ env.IMAGE_NAME }}:${NEW_TAG}" >> release_notes.md
+          echo "docker pull ${{ env.IMAGE_NAME }}:latest" >> release_notes.md
+          echo '```' >> release_notes.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.get_version.outputs.new_version }}
+          name: Release ${{ steps.get_version.outputs.new_version }}
+          body_path: release_notes.md
+          draft: false
+          prerelease: false

@@ -1,0 +1,51 @@
+name: Bug report
+description: Report a problem or unexpected behavior
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues to avoid duplicates
+          required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened? Keep it brief and clear.
+      placeholder: Short description of the bug
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: How can we reproduce the issue?
+      placeholder: |
+        1. Go to ...
+        2. Click ...
+        3. See error
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      placeholder: What did you expect to happen?
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment (optional)
+      description: OS/Browser or runtime info if relevant
+      placeholder: e.g., macOS 14, Chrome 120 / Python 3.11
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs or screenshots (optional)
+      description: Paste errors or attach images to help diagnose
+      render: shell
+
