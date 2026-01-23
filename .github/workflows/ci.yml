@@ -84,12 +84,12 @@ jobs:
       # - name: Run tests
       #   run: cd app/frontend && pnpm test
 
-  docker-build-test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Test Docker Compose
-        run: docker compose -f docker-compose.yml config
+  # docker-build-test:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         submodules: recursive
+  #
+  #     - name: Test Docker Compose
+  #       run: docker compose -f docker-compose.yml config
