@@ -6,49 +6,51 @@ import { Button } from "@/components/ui/button"
 import { FileText, RefreshCw } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { toast } from "sonner"
-import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
 import type { UserDownload } from "@/types/user-download"
 import { FileConversionCard } from "./file-conversion-card"
 import { log } from "@/lib/logger"
-
-const getStatusStages = (currentStatus: string, hasError = false) => {
-  if (hasError) {
-    return ["UPLOADING", "PROCESSING", "ERRORRED"] as const
-  }
-  if (currentStatus === "QUEUED") {
-    return ["UPLOADING", "QUEUED", "COMPLETE"] as const
-  }
-  return ["UPLOADING", "PROCESSING", "COMPLETE"] as const
-}
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from "@/components/ui/pagination"
 
 interface MyDownloadsProps {
-  limit?: number
+  pageSize?: number
 }
 
-export function MyDownloads({ limit = 100 }: MyDownloadsProps) {
+export function MyDownloads({ pageSize = 10 }: MyDownloadsProps) {
   const [downloads, setDownloads] = useState<UserDownload[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [downloadingFiles, setDownloadingFiles] = useState<Record<string, boolean>>({})
   const [totalCount, setTotalCount] = useState(0)
   const [refreshing, setRefreshing] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+
+  const totalPages = Math.ceil(totalCount / pageSize)
 
   useEffect(() => {
-    fetchDownloads()
-  }, [])
+    fetchDownloads(currentPage)
+  }, [currentPage])
 
-  const fetchDownloads = async () => {
+  const fetchDownloads = async (page: number = 1) => {
     try {
       setLoading(true)
       setError(null)
       setRefreshing(true)
 
       const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8060"
+      const offset = (page - 1) * pageSize
 
-      const response = await fetch(`${API_BASE_URL}/downloads?limit=${limit}&include_dismissed=true`, {
+      const response = await fetch(`${API_BASE_URL}/downloads?limit=${pageSize}&offset=${offset}&include_dismissed=true`, {
         signal: AbortSignal.timeout(3000),
       })
 
@@ -133,46 +135,17 @@ export function MyDownloads({ limit = 100 }: MyDownloadsProps) {
         const err = await res.json().catch(() => ({}))
         throw new Error(err.error || `Delete failed (${res.status})`)
       }
-      setDownloads((prev) => prev.filter((d) => d.job_id !== download.job_id))
-      setTotalCount((c) => Math.max(0, c - 1))
+      // If this was the last item on the page, go to previous page
+      if (downloads.length === 1 && currentPage > 1) {
+        setCurrentPage((p) => p - 1)
+      } else {
+        // Refetch current page to get updated list
+        fetchDownloads(currentPage)
+      }
       toast.success(`Deleted ${download.converted_filename}`)
     } catch (e) {
       toast.error("Failed to delete download", { description: e instanceof Error ? e.message : String(e) })
     }
-  }
-
-  
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "Unknown"
-    try {
-      const date = new Date(dateString)
-      return date.toLocaleString(undefined, {
-        month: "short",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-      })
-    } catch {
-      return "Unknown"
-    }
-  }
-
-  const formatDuration = (seconds?: number) => {
-    if (!seconds) return null
-
-    if (seconds < 60) {
-      return `${Math.round(seconds)}s`
-    }
-
-    const minutes = Math.floor(seconds / 60)
-    const remainingSeconds = Math.round(seconds % 60)
-
-    if (remainingSeconds === 0) {
-      return `${minutes}m`
-    }
-
-    return `${minutes}m ${remainingSeconds}s`
   }
 
   if (loading) {
@@ -208,7 +181,7 @@ export function MyDownloads({ limit = 100 }: MyDownloadsProps) {
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{error}</AlertDescription>
           </Alert>
-          <Button onClick={fetchDownloads} className="mt-4 bg-transparent" variant="outline">
+          <Button onClick={() => fetchDownloads(currentPage)} className="mt-4 bg-transparent" variant="outline">
             Try Again
           </Button>
         </CardContent>
@@ -241,7 +214,7 @@ export function MyDownloads({ limit = 100 }: MyDownloadsProps) {
           <Button
             variant="ghost"
             size="icon"
-            onClick={fetchDownloads}
+            onClick={() => fetchDownloads(currentPage)}
             disabled={refreshing}
             aria-label="Refresh downloads list"
             className="h-8 w-8 shrink-0"
@@ -251,7 +224,7 @@ export function MyDownloads({ limit = 100 }: MyDownloadsProps) {
         </div>
         <CardDescription>
           {totalCount} completed conversion{totalCount !== 1 ? "s" : ""}
-          
+          {totalPages > 1 && ` • Page ${currentPage} of ${totalPages}`}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -290,6 +263,84 @@ export function MyDownloads({ limit = 100 }: MyDownloadsProps) {
             })}
           </AnimatePresence>
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <Pagination className="mt-6">
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                />
+              </PaginationItem>
+
+              {/* First page */}
+              {currentPage > 2 && (
+                <PaginationItem>
+                  <PaginationLink onClick={() => setCurrentPage(1)} className="cursor-pointer">
+                    1
+                  </PaginationLink>
+                </PaginationItem>
+              )}
+
+              {/* Ellipsis before current */}
+              {currentPage > 3 && (
+                <PaginationItem>
+                  <PaginationEllipsis />
+                </PaginationItem>
+              )}
+
+              {/* Previous page */}
+              {currentPage > 1 && (
+                <PaginationItem>
+                  <PaginationLink onClick={() => setCurrentPage(currentPage - 1)} className="cursor-pointer">
+                    {currentPage - 1}
+                  </PaginationLink>
+                </PaginationItem>
+              )}
+
+              {/* Current page */}
+              <PaginationItem>
+                <PaginationLink isActive className="cursor-default">
+                  {currentPage}
+                </PaginationLink>
+              </PaginationItem>
+
+              {/* Next page */}
+              {currentPage < totalPages && (
+                <PaginationItem>
+                  <PaginationLink onClick={() => setCurrentPage(currentPage + 1)} className="cursor-pointer">
+                    {currentPage + 1}
+                  </PaginationLink>
+                </PaginationItem>
+              )}
+
+              {/* Ellipsis after current */}
+              {currentPage < totalPages - 2 && (
+                <PaginationItem>
+                  <PaginationEllipsis />
+                </PaginationItem>
+              )}
+
+              {/* Last page */}
+              {currentPage < totalPages - 1 && (
+                <PaginationItem>
+                  <PaginationLink onClick={() => setCurrentPage(totalPages)} className="cursor-pointer">
+                    {totalPages}
+                  </PaginationLink>
+                </PaginationItem>
+              )}
+
+              <PaginationItem>
+                <PaginationNext
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        )}
       </CardContent>
     </Card>
   )

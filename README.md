@@ -191,23 +191,23 @@ Access all your completed conversions with download links, file details, and the
 2. Create a `docker-compose.yml` with the following content:
    ```yaml
    services:
-     app:
-       image: nilsleo/kcc-cloud:latest
-       container_name: kcc-cloud
-       restart: unless-stopped
-       ports:
-         - "8080:80"
-       environment:
-         - USER_ID=1000           # set to your user id (run: id -u)
-         - GROUP_ID=1000          # set to your group id (run: id -g)
-         - TZ=Europe/Berlin       # set your timezone
-         - NEXT_PUBLIC_MAX_FILES=10
-         - CELERY_WORKERS=2       # parallel conversions; increase for more throughput
-       volumes:
-         - ./volumes/data:/data
-         # Optional: mount KindleGen if you have it (read-only)
-         # Download from https://archive.org/details/kindlegen and place in ./volumes/kindlegen
-         - ./volumes/kindlegen:/opt/backend/kindlegen:ro
+      kcc-cloud:
+        image: nilsleo/kcc-cloud:latest
+        container_name: kcc-cloud
+        restart: unless-stopped
+        ports:
+          - "8654:80" 
+        environment:
+          - USER_ID=1024          # set to your user id (run: id -u)
+          - GROUP_ID=100          # set to your group id (run: id -g)
+          - TZ=Europe/Berlin       # set your timezone
+          - NEXT_PUBLIC_MAX_FILES=10
+          - CELERY_WORKERS=4      # parallel conversions; increase for more throughput
+        volumes:
+          - ./volumes/kcc-web-data:/data
+          # Optional: mount KindleGen if you have it (read-only)
+          # Download from https://archive.org/details/kindlegen and place in ./volumes/kindlegen
+          - ./volumes/kindlegen:/opt/backend/kindlegen:ro
    ```
 
 3. Start the app:
@@ -222,9 +222,18 @@ Access all your completed conversions with download links, file details, and the
 
 1. **Download KindleGen**: Amazon's conversion tool for MOBI/AZW3 formats. Get the Linux version from [archive.org/details/kindlegen](https://archive.org/details/kindlegen)
 
-2. **Place the binary**: Extract and place the `kindlegen` binary in `./volumes/kindlegen/` folder (create if needed)
+2. **Place the binary**: Extract and place the `kindlegen` binary in `./volumes/kindlegen/` folder:
+   ```bash
+   mkdir -p ./volumes/kindlegen
+   # Copy or extract kindlegen binary to this folder
+   ```
 
-3. **Restart**: The volume mount in docker-compose.yml will make it available. Run `docker compose restart` if already running
+3. **Set execute permissions**: The binary must be executable before mounting into the container:
+   ```bash
+   chmod +x ./volumes/kindlegen/kindlegen
+   ```
+
+4. **Start the container**: The volume mount in docker-compose.yml will make kindlegen available to KCC
 
 ### Scaling Workers
 
