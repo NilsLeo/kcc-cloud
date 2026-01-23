@@ -26,16 +26,37 @@ const nextConfig = {
     parallelServerBuildTraces: true,
     parallelServerCompiles: true,
   } : {},
-  // Proxy API and WebSocket requests to backend (replaces nginx routing)
+  // Proxy API requests to backend (for development)
+  // Note: WebSocket connections need to go directly to backend - Next.js rewrites don't support WS upgrades
+  // In production, nginx handles routing so these rewrites are not used
   async rewrites() {
+    // BACKEND_URL is set in docker-compose for dev (http://backend:8060)
+    // Default to localhost for production fallback (single container)
+    const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:8060'
     return [
       {
         source: '/api/:path*',
-        destination: 'http://localhost:8060/:path*',
+        destination: `${backendUrl}/:path*`,
       },
       {
-        source: '/socket.io/:path*',
-        destination: 'http://localhost:8060/socket.io/:path*',
+        source: '/jobs',
+        destination: `${backendUrl}/jobs`,
+      },
+      {
+        source: '/jobs/:path*',
+        destination: `${backendUrl}/jobs/:path*`,
+      },
+      {
+        source: '/download/:path*',
+        destination: `${backendUrl}/download/:path*`,
+      },
+      {
+        source: '/downloads',
+        destination: `${backendUrl}/downloads`,
+      },
+      {
+        source: '/downloads/:path*',
+        destination: `${backendUrl}/downloads/:path*`,
       },
     ]
   },

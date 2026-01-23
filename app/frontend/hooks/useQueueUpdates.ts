@@ -36,10 +36,10 @@ export function useQueueUpdates(enabled = true) {
   const [error, setError] = useState<string | null>(null)
 
   const socketRef = useRef<Socket | null>(null)
-  // For WebSocket, prefer same-origin unless NEXT_PUBLIC_SOCKET_URL is set
+  // For WebSocket, prefer same-origin unless NEXT_PUBLIC_WS_URL is set
   // Using NEXT_PUBLIC_API_URL (e.g. "/api") would incorrectly target "/api/socket.io"
   // which isn't upgraded by nginx. So default to same-origin Socket.IO endpoint.
-  const SOCKET_URL = (process.env.NEXT_PUBLIC_SOCKET_URL || '').trim()
+  const SOCKET_URL = (process.env.NEXT_PUBLIC_WS_URL || '').trim()
 
   useEffect(() => {
     if (!enabled) return

@@ -218,22 +218,17 @@ Access all your completed conversions with download links, file details, and the
 4. Access the web interface:
    - App: http://localhost:8080
 
-### Adding KindleGen (Required for Kindle Conversions)
+### KindleGen
 
-1. **Download KindleGen**: Amazon's conversion tool for MOBI/AZW3 formats. Get the Linux version from [archive.org/details/kindlegen](https://archive.org/details/kindlegen)
+Download the Linux version from [archive.org/details/kindlegen](https://archive.org/details/kindlegen) and place it in `./volumes/kindlegen/`:
 
-2. **Place the binary**: Extract and place the `kindlegen` binary in `./volumes/kindlegen/` folder:
-   ```bash
-   mkdir -p ./volumes/kindlegen
-   # Copy or extract kindlegen binary to this folder
-   ```
+```bash
+mkdir -p ./volumes/kindlegen
+# Copy or extract kindlegen binary to this folder
+chmod +x ./volumes/kindlegen/kindlegen
+```
 
-3. **Set execute permissions**: The binary must be executable before mounting into the container:
-   ```bash
-   chmod +x ./volumes/kindlegen/kindlegen
-   ```
-
-4. **Start the container**: The volume mount in docker-compose.yml will make kindlegen available to KCC
+The volume mount in docker-compose.yml will make it available to KCC.
 
 ### Scaling Workers
 
