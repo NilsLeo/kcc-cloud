@@ -71,7 +71,9 @@ def register_routes(app):
                 return jsonify({"error": "File type not allowed"}), 400
 
             # Get conversion options
-            device_profile = request.form.get("device_profile", "KV")
+            # Device profile is optional. Only use it if explicitly provided by client.
+            raw_device_profile = request.form.get("device_profile")
+            device_profile = raw_device_profile if raw_device_profile and raw_device_profile != "undefined" else None
             input_filename = secure_filename(file.filename)
             job_id = str(uuid.uuid4())
 
@@ -127,7 +129,9 @@ def register_routes(app):
                     # Text options
                     author=request.form.get("author", "KCC"),
                     title=request.form.get("title", ""),
-                    output_format=request.form.get("output_format", "EPUB"),
+                    # Do not force a default here; let the command generator pick
+                    # a sensible default based on device profile when not provided.
+                    output_format=(request.form.get("output_format") or None),
                 )
 
                 db.add(job)
@@ -151,7 +155,7 @@ def register_routes(app):
                         {
                             "status": JobStatus.UPLOADING.value,
                             "input_filename": input_filename,
-                            "device_profile": device_profile,
+                            "device_profile": device_profile or "",
                             "file_size": file_size or 0,
                             "created_at": job.created_at,
                         },
