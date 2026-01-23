@@ -12,7 +12,7 @@ Thank you for your interest in contributing to KCC Cloud! This document provides
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/nilsleo/kcc-cloud.git
+   git clone git@github.com:NilsLeo/kcc-cloud.git
    cd kcc-cloud
    ```
 
