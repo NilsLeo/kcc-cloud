@@ -4,7 +4,6 @@
 # - Installs and runs Flask backend (gunicorn + eventlet)
 # - Runs Celery worker
 # - Runs Redis broker
-# - Uses Nginx as reverse proxy on port 80
 # - All processes managed by Supervisor
 ###############################################
 

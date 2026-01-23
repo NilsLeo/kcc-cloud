@@ -26,6 +26,23 @@ const nextConfig = {
     parallelServerBuildTraces: true,
     parallelServerCompiles: true,
   } : {},
+  // Proxy API and WebSocket requests to backend (replaces nginx routing)
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://localhost:8060/:path*',
+      },
+      {
+        source: '/socket.io/:path*',
+        destination: 'http://localhost:8060/socket.io/:path*',
+      },
+      {
+        source: '/downloads',
+        destination: 'http://localhost:8060/downloads',
+      },
+    ]
+  },
   webpack: (config, { isServer }) => {
     if (isServer) {
       // Fix for "self is not defined" error in middleware
