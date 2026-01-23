@@ -188,7 +188,19 @@ Access all your completed conversions with download links, file details, and the
    mkdir mangaconverter && cd mangaconverter
    ```
 
-2. Create a `docker-compose.yml` with the following content:
+2. Set up KindleGen (optional, but recommended for MOBI/AZW support):
+
+   Download the Linux version from [archive.org/details/kindlegen](https://archive.org/details/kindlegen) and place it in `./volumes/kindlegen/`:
+
+   ```bash
+   mkdir -p ./volumes/kindlegen
+   cd ./volumes/kindlegen
+   wget https://dn710205.ca.archive.org/0/items/kindlegen/kindlegen
+   chmod +x kindlegen
+   cd ../..
+   ```
+
+3. Create a `docker-compose.yml` with the following content:
    ```yaml
    services:
       kcc-cloud:
@@ -196,7 +208,7 @@ Access all your completed conversions with download links, file details, and the
         container_name: kcc-cloud
         restart: unless-stopped
         ports:
-          - "8654:80" 
+          - "8654:80"
         environment:
           - USER_ID=1024          # set to your user id (run: id -u)
           - GROUP_ID=100          # set to your group id (run: id -g)
@@ -205,31 +217,17 @@ Access all your completed conversions with download links, file details, and the
           - CELERY_WORKERS=4      # parallel conversions; increase for more throughput
         volumes:
           - ./volumes/kcc-web-data:/data
-          # Optional: mount KindleGen if you have it (read-only)
-          # Download from https://archive.org/details/kindlegen and place in ./volumes/kindlegen
+          # KindleGen mount (if set up in step 2)
           - ./volumes/kindlegen:/opt/backend/kindlegen:ro
    ```
 
-3. Start the app:
+4. Start the app:
    ```bash
    docker compose up -d
    ```
 
-4. Access the web interface:
+5. Access the web interface:
    - App: http://localhost:8080
-
-### KindleGen
-
-Download the Linux version from [archive.org/details/kindlegen](https://archive.org/details/kindlegen) and place it in `./volumes/kindlegen/`:
-
-```bash
-mkdir -p ./volumes/kindlegen
-cd ./volumes/kindlegen
-wget https://dn710205.ca.archive.org/0/items/kindlegen/kindlegen
-chmod +x kindlegen
-```
-
-The volume mount in docker-compose.yml will make it available to KCC.
 
 ### Scaling Workers
 
