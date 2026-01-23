@@ -1,7 +1,4 @@
 services:
-  # ============================================
-  # DEVELOPMENT SERVICES
-  # ============================================
 
   frontend-dev:
     build:
@@ -64,7 +61,7 @@ services:
       - redis
     develop:
       watch:
-        - action: restart
+        - action: sync+restart
           path: app/backend/app
           ignore:
             - __pycache__/
@@ -108,7 +105,7 @@ services:
       - redis
     develop:
       watch:
-        - action: restart
+        - action: sync+restart
           path: app/backend/app
           ignore:
             - __pycache__/
@@ -141,37 +138,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-
-  # ============================================
-  # PRODUCTION SERVICE (single-container)
-  # ============================================
-
-  app-prod:
-    container_name: kcc-cloud-app-prod
-    build:
-      context: .
-      dockerfile: Dockerfile.prod
-      args:
-        USER_ID: ${PUID:-1000}
-        GROUP_ID: ${PGID:-1000}
-        # Use same-origin API via container nginx (mapped at /api)
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL_PROD:-/api}
-        NEXT_PUBLIC_MAX_FILES: ${NEXT_PUBLIC_MAX_FILES:-10}
-    restart: unless-stopped
-    ports:
-      - "8080:3000"  # Next.js frontend
-      # - "8060:8060"  # Optional: expose backend directly if not using path-based proxy
-    environment:
-      - TZ=${TZ:-UTC}
-      - PUID=${PUID:-1000}
-      - PGID=${PGID:-1000}
-      - NEXT_PUBLIC_MAX_FILES=${NEXT_PUBLIC_MAX_FILES:-10}
-      - CELERY_WORKERS=${CELERY_WORKERS:-3}
-      - MAX_UPLOAD_SIZE=${MAX_UPLOAD_SIZE:-1073741824}
-      - KCC_PATH=${KCC_PATH:-/opt/backend/kcc/kcc-c2e.py}
-    volumes:
-      - ./volumes/data:/data
-      - ./volumes/kindlegen:/opt/backend/kindlegen:ro
 
 volumes:
   conversion-data:

@@ -12,7 +12,7 @@ Thank you for your interest in contributing to KCC Cloud! This document provides
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/nilsleo/kcc-cloud.git
+   git clone git@github.com:NilsLeo/kcc-cloud.git 
    cd kcc-cloud
    ```
 
@@ -24,7 +24,7 @@ Thank you for your interest in contributing to KCC Cloud! This document provides
 
 3. **Start the development environment**
    ```bash
-   docker compose -f docker-compose.dev.yml up
+   docker compose -f docker-compose.yml up
    ```
 
 4. **Access the application**

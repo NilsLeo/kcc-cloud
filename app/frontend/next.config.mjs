@@ -37,10 +37,6 @@ const nextConfig = {
         source: '/socket.io/:path*',
         destination: 'http://localhost:8060/socket.io/:path*',
       },
-      {
-        source: '/downloads',
-        destination: 'http://localhost:8060/downloads',
-      },
     ]
   },
   webpack: (config, { isServer }) => {
