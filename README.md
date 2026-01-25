@@ -144,7 +144,7 @@ Access all your completed conversions with download links, file details, and the
 
 ## 🏗️ Architecture
 
-![System architecture diagram](docs/images/system-architecture.svg)
+![System architecture diagram](docs/images/system-architecture.jpg)
 
 **Microservices Architecture:**
 - **Frontend**: Next.js 16 with React 19, TypeScript, Tailwind CSS, Radix UI
