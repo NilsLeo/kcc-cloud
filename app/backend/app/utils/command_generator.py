@@ -80,6 +80,18 @@ def generate_command(options: Dict[str, Any], job_id: str = None, user_id: str =
 
     # Add device profile if specified
     if device_profile:
+        # Map "OTHER" to KCC's default profile "KV" (Kindle Voyage)
+        if device_profile.upper() == "OTHER":
+            device_profile = "KV"
+            log_with_context(
+                logger,
+                "info",
+                "Mapped 'Other' profile to KCC default 'KV' (Kindle Voyage)",
+                job_id=job_id,
+                user_id=user_id,
+                source="command_generator",
+            )
+
         command.extend(["-p", str(device_profile)])
         log_with_context(
             logger,
