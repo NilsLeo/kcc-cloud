@@ -10,11 +10,13 @@ Thank you for your interest in contributing to KCC Cloud! This document provides
 
 ### Local Development
 
-1. **Clone the repository**
+1. **Clone the repository and initialize submodules**
    ```bash
-   git clone git@github.com:NilsLeo/kcc-cloud.git 
+   git clone git@github.com:NilsLeo/kcc-cloud.git
    cd kcc-cloud
+   git submodule update --init --recursive
    ```
+   Note: The KCC (Kindle Comic Converter) library is included as a git submodule and must be initialized after cloning.
 
 2. **Copy environment variables**
    ```bash
