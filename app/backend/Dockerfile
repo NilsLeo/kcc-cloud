@@ -17,7 +17,7 @@ RUN mkdir -p /data && chown appuser:appuser /data
 # Set working directory
 WORKDIR /app
 
-# Install system packages with retry logic
+# Install system packages with retry logic (including git for submodules)
 RUN echo "deb http://cdn-fastly.deb.debian.org/debian trixie main contrib non-free" > /etc/apt/sources.list && \
     echo "deb http://security.debian.org/debian-security trixie-security main contrib non-free" >> /etc/apt/sources.list && \
     echo "Acquire::Retries \"3\";" > /etc/apt/apt.conf.d/80-retries && \
@@ -36,6 +36,7 @@ RUN echo "deb http://cdn-fastly.deb.debian.org/debian trixie main contrib non-fr
     libffi-dev \
     python3-dev \
     libev-dev \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 # Upgrade pip
@@ -45,8 +46,8 @@ RUN pip install --upgrade pip
 RUN find /app -depth -name "__pycache__" -exec rm -rf {} + || true
 
 # Copy requirements files first (for better Docker layer caching)
-COPY app/requirements.txt /app/requirements.txt
-COPY app/kcc/requirements.txt /app/kcc/requirements.txt
+COPY app/backend/app/requirements.txt /app/requirements.txt
+COPY app/backend/app/kcc/requirements.txt /app/kcc/requirements.txt
 
 # Install Python dependencies
 ENV PIP_DEFAULT_TIMEOUT=1000
@@ -54,7 +55,7 @@ RUN pip install --retries 5 --no-cache-dir -r /app/requirements.txt
 RUN pip install --retries 5 --no-cache-dir -r /app/kcc/requirements.txt
 
 # Now copy the rest of the application code
-COPY app /app
+COPY app/backend/app /app
 
 # Note: kindlegen is a proprietary binary and must be volume-mounted at /app/kindlegen/
 # It's added to PATH below so it can be found by the application
