@@ -464,6 +464,14 @@ export function AdvancedOptions({ options, onChange, deviceProfile, contentType 
                   tooltip="Use .epub extension instead of .kepub.epub"
                   contentType={contentType}
                 />
+                <OptionCheckbox
+                  id="force-color"
+                  label="Force Color"
+                  checked={options.forceColor}
+                  onCheckedChange={() => handleCheckboxChange("forceColor")}
+                  tooltip="Don't convert images to grayscale - keep original colors"
+                  contentType={contentType}
+                />
               </div>
             </div>
           </div>
