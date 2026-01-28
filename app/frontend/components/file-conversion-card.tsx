@@ -426,7 +426,9 @@ export function FileConversionCard({
               {/* Filesize inline with filename */}
               <div className="min-w-0 flex-1 max-w-full overflow-hidden">
                 <div className="flex items-center gap-2 max-w-full overflow-hidden">
-                  <p className="font-medium truncate flex-1 min-w-0">{file.name}</p>
+                  <p className="font-medium truncate flex-1 min-w-0">
+                    {file.status === "COMPLETE" ? (file.convertedName || file.name) : file.name}
+                  </p>
                   {/* Status label */}
                   <span
                     className={`md:hidden text-xs font-medium w-24 max-w-24 text-right shrink-0 ${statusColors.text}`}
