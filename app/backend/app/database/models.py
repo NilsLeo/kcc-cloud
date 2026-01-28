@@ -94,39 +94,39 @@ class ConversionJob(Base):
     )  # Celery task ID for the conversion task (revocable)
 
     # Atomized conversion options (previously in JSON 'options' field)
-    # Boolean options
-    manga_style = Column(Boolean, default=False)
-    hq = Column(Boolean, default=False)
-    two_panel = Column(Boolean, default=False)
-    webtoon = Column(Boolean, default=False)
-    no_processing = Column(Boolean, default=False)
-    upscale = Column(Boolean, default=False)
-    stretch = Column(Boolean, default=False)
-    autolevel = Column(Boolean, default=False)
-    black_borders = Column(Boolean, default=False)
-    white_borders = Column(Boolean, default=False)
-    force_color = Column(Boolean, default=False)
-    force_png = Column(Boolean, default=False)
-    mozjpeg = Column(Boolean, default=False)
-    no_kepub = Column(Boolean, default=False)
-    spread_shift = Column(Boolean, default=False)
-    no_rotate = Column(Boolean, default=False)
-    rotate_first = Column(Boolean, default=False)
+    # Boolean options - nullable to distinguish between "not set" and "explicitly False"
+    manga_style = Column(Boolean, nullable=True)
+    hq = Column(Boolean, nullable=True)
+    two_panel = Column(Boolean, nullable=True)
+    webtoon = Column(Boolean, nullable=True)
+    no_processing = Column(Boolean, nullable=True)
+    upscale = Column(Boolean, nullable=True)
+    stretch = Column(Boolean, nullable=True)
+    autolevel = Column(Boolean, nullable=True)
+    black_borders = Column(Boolean, nullable=True)
+    white_borders = Column(Boolean, nullable=True)
+    force_color = Column(Boolean, nullable=True)
+    force_png = Column(Boolean, nullable=True)
+    mozjpeg = Column(Boolean, nullable=True)
+    no_kepub = Column(Boolean, nullable=True)
+    spread_shift = Column(Boolean, nullable=True)
+    no_rotate = Column(Boolean, nullable=True)
+    rotate_first = Column(Boolean, nullable=True)
 
-    # Integer options
+    # Integer options - nullable to distinguish between "not set" and explicit values
     target_size = Column(Integer, nullable=True)
-    splitter = Column(Integer, default=0)
-    cropping = Column(Integer, default=0)
+    splitter = Column(Integer, nullable=True)
+    cropping = Column(Integer, nullable=True)
     custom_width = Column(Integer, nullable=True)
     custom_height = Column(Integer, nullable=True)
 
-    # Float options
+    # Float options - nullable to distinguish between "not set" and explicit values
     gamma = Column(Integer, nullable=True)  # Using Integer for compatibility, can be REAL
-    cropping_power = Column(Integer, default=1)  # Using Integer for compatibility, can be REAL
-    preserve_margin = Column(Integer, default=0)  # Using Integer for compatibility, can be REAL
+    cropping_power = Column(Integer, nullable=True)  # Using Integer for compatibility, can be REAL
+    preserve_margin = Column(Integer, nullable=True)  # Using Integer for compatibility, can be REAL
 
-    # Text options
-    author = Column(String(255), default="KCC")
+    # Text options - nullable to distinguish between "not set" and explicit values
+    author = Column(String(255), nullable=True)
     title = Column(String(255), nullable=True)
     output_format = Column(String(50), nullable=True)
 
@@ -136,37 +136,72 @@ class ConversionJob(Base):
         return get_file_extension(self.output_filename)
 
     def get_options_dict(self):
-        """Get conversion options as a dictionary from atomized columns"""
-        return {
-            "manga_style": self.manga_style,
-            "hq": self.hq,
-            "two_panel": self.two_panel,
-            "webtoon": self.webtoon,
-            "no_processing": self.no_processing,
-            "upscale": self.upscale,
-            "stretch": self.stretch,
-            "autolevel": self.autolevel,
-            "black_borders": self.black_borders,
-            "white_borders": self.white_borders,
-            "force_color": self.force_color,
-            "force_png": self.force_png,
-            "mozjpeg": self.mozjpeg,
-            "no_kepub": self.no_kepub,
-            "spread_shift": self.spread_shift,
-            "no_rotate": self.no_rotate,
-            "rotate_first": self.rotate_first,
-            "target_size": self.target_size,
-            "splitter": self.splitter,
-            "cropping": self.cropping,
-            "custom_width": self.custom_width,
-            "custom_height": self.custom_height,
-            "gamma": self.gamma,
-            "cropping_power": self.cropping_power,
-            "preserve_margin": self.preserve_margin,
-            "author": self.author,
-            "title": self.title,
-            "output_format": self.output_format,
-        }
+        """Get conversion options as a dictionary from atomized columns.
+
+        Only returns options that are not None (were explicitly set).
+        This prevents passing defaults to command generator.
+        """
+        options = {}
+
+        # Only add non-None values - these were explicitly set by frontend
+        if self.manga_style is not None:
+            options["manga_style"] = self.manga_style
+        if self.hq is not None:
+            options["hq"] = self.hq
+        if self.two_panel is not None:
+            options["two_panel"] = self.two_panel
+        if self.webtoon is not None:
+            options["webtoon"] = self.webtoon
+        if self.no_processing is not None:
+            options["no_processing"] = self.no_processing
+        if self.upscale is not None:
+            options["upscale"] = self.upscale
+        if self.stretch is not None:
+            options["stretch"] = self.stretch
+        if self.autolevel is not None:
+            options["autolevel"] = self.autolevel
+        if self.black_borders is not None:
+            options["black_borders"] = self.black_borders
+        if self.white_borders is not None:
+            options["white_borders"] = self.white_borders
+        if self.force_color is not None:
+            options["force_color"] = self.force_color
+        if self.force_png is not None:
+            options["force_png"] = self.force_png
+        if self.mozjpeg is not None:
+            options["mozjpeg"] = self.mozjpeg
+        if self.no_kepub is not None:
+            options["no_kepub"] = self.no_kepub
+        if self.spread_shift is not None:
+            options["spread_shift"] = self.spread_shift
+        if self.no_rotate is not None:
+            options["no_rotate"] = self.no_rotate
+        if self.rotate_first is not None:
+            options["rotate_first"] = self.rotate_first
+        if self.target_size is not None:
+            options["target_size"] = self.target_size
+        if self.splitter is not None:
+            options["splitter"] = self.splitter
+        if self.cropping is not None:
+            options["cropping"] = self.cropping
+        if self.custom_width is not None:
+            options["custom_width"] = self.custom_width
+        if self.custom_height is not None:
+            options["custom_height"] = self.custom_height
+        if self.gamma is not None:
+            options["gamma"] = self.gamma
+        if self.cropping_power is not None:
+            options["cropping_power"] = self.cropping_power
+        if self.preserve_margin is not None:
+            options["preserve_margin"] = self.preserve_margin
+        if self.author is not None:
+            options["author"] = self.author
+        if self.title is not None:
+            options["title"] = self.title
+        if self.output_format is not None:
+            options["output_format"] = self.output_format
+
+        return options
 
 
 # SQLite database configuration
