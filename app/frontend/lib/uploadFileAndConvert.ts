@@ -44,6 +44,12 @@ export async function uploadFileAndConvert(
     device_profile: deviceProfile,
   })
 
+  // Log the advanced options being sent
+  log(`[UPLOAD] Advanced options for job ${jobId}`, {
+    options_count: Object.keys(options).length,
+    options: options,
+  })
+
   const formData = new FormData()
   formData.append('file', file)
   if (deviceProfile && deviceProfile !== 'Placeholder') {
@@ -51,7 +57,14 @@ export async function uploadFileAndConvert(
   }
   formData.append('job_id', jobId)
   for (const [key, value] of Object.entries(options)) {
-    if (value !== undefined && value !== null) formData.append(key, String(value))
+    if (value !== undefined && value !== null) {
+      formData.append(key, String(value))
+      log(`[UPLOAD] Adding option: ${key} = ${value}`, {
+        job_id: jobId,
+        option_key: key,
+        option_value: value,
+      })
+    }
   }
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8060'
