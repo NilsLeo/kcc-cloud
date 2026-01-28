@@ -46,6 +46,8 @@ RUN pip install --upgrade pip
 RUN find /app -depth -name "__pycache__" -exec rm -rf {} + || true
 
 # Copy requirements files first (for better Docker layer caching)
+# NOTE: KCC submodule must be initialized on host before building
+# Run: git submodule update --init --recursive
 COPY app/backend/app/requirements.txt /app/requirements.txt
 COPY app/backend/app/kcc/requirements.txt /app/kcc/requirements.txt
 
@@ -54,7 +56,7 @@ ENV PIP_DEFAULT_TIMEOUT=1000
 RUN pip install --retries 5 --no-cache-dir -r /app/requirements.txt
 RUN pip install --retries 5 --no-cache-dir -r /app/kcc/requirements.txt
 
-# Now copy the rest of the application code
+# Copy entire application directory (includes initialized kcc submodule)
 COPY app/backend/app /app
 
 # Note: kindlegen is a proprietary binary and must be volume-mounted at /app/kindlegen/
