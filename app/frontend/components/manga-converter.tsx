@@ -72,29 +72,87 @@ export type AdvancedOptionsType = {
   outputFormat: string
   author: string
   noKepub: boolean
+  forceColor: boolean
   customWidth: number
   customHeight: number
 }
 
 // Helper function to convert frontend options to backend format
+// KCC defaults - only send options that differ from these
+// This ensures clean commands with minimal parameters
+const FRONTEND_DEFAULTS: AdvancedOptionsType = {
+  mangaStyle: false,
+  hq: false,
+  twoPanel: false,
+  webtoon: false,
+  targetSize: 400, // KCC default for non-webtoon (100 for webtoon)
+  noProcessing: false,
+  upscale: false,
+  stretch: false,
+  splitter: 0,
+  gamma: 0.0,
+  outputFormat: "Auto",
+  author: "KCC",
+  noKepub: false,
+  forceColor: false,
+  customWidth: 0,
+  customHeight: 0,
+}
+
 function convertAdvancedOptionsToBackend(options: AdvancedOptionsType) {
-  return {
-    manga_style: options.mangaStyle,
-    hq: options.hq,
-    two_panel: options.twoPanel,
-    webtoon: options.webtoon,
-    target_size: options.targetSize || undefined,
-    no_processing: options.noProcessing,
-    upscale: options.upscale,
-    stretch: options.stretch,
-    splitter: options.splitter,
-    gamma: options.gamma || undefined,
-    output_format: options.outputFormat !== "Auto" ? options.outputFormat : undefined,
-    author: options.author || undefined,
-    no_kepub: options.noKepub,
-    custom_width: options.customWidth || undefined,
-    custom_height: options.customHeight || undefined,
+  const result: Record<string, any> = {}
+
+  // Only send options that differ from defaults
+  if (options.mangaStyle !== FRONTEND_DEFAULTS.mangaStyle) {
+    result.manga_style = options.mangaStyle
   }
+  if (options.hq !== FRONTEND_DEFAULTS.hq) {
+    result.hq = options.hq
+  }
+  if (options.twoPanel !== FRONTEND_DEFAULTS.twoPanel) {
+    result.two_panel = options.twoPanel
+  }
+  if (options.webtoon !== FRONTEND_DEFAULTS.webtoon) {
+    result.webtoon = options.webtoon
+  }
+  if (options.targetSize && options.targetSize !== FRONTEND_DEFAULTS.targetSize) {
+    result.target_size = options.targetSize
+  }
+  if (options.noProcessing !== FRONTEND_DEFAULTS.noProcessing) {
+    result.no_processing = options.noProcessing
+  }
+  if (options.upscale !== FRONTEND_DEFAULTS.upscale) {
+    result.upscale = options.upscale
+  }
+  if (options.stretch !== FRONTEND_DEFAULTS.stretch) {
+    result.stretch = options.stretch
+  }
+  if (options.splitter !== FRONTEND_DEFAULTS.splitter) {
+    result.splitter = options.splitter
+  }
+  if (options.gamma && options.gamma !== FRONTEND_DEFAULTS.gamma) {
+    result.gamma = options.gamma
+  }
+  if (options.outputFormat !== FRONTEND_DEFAULTS.outputFormat) {
+    result.output_format = options.outputFormat
+  }
+  if (options.author && options.author !== FRONTEND_DEFAULTS.author) {
+    result.author = options.author
+  }
+  if (options.noKepub !== FRONTEND_DEFAULTS.noKepub) {
+    result.no_kepub = options.noKepub
+  }
+  if (options.forceColor !== FRONTEND_DEFAULTS.forceColor) {
+    result.force_color = options.forceColor
+  }
+  if (options.customWidth && options.customWidth !== FRONTEND_DEFAULTS.customWidth) {
+    result.custom_width = options.customWidth
+  }
+  if (options.customHeight && options.customHeight !== FRONTEND_DEFAULTS.customHeight) {
+    result.custom_height = options.customHeight
+  }
+
+  return result
 }
 
 export function MangaConverter({ contentType }: { contentType: "comic" | "manga" }) {
@@ -137,22 +195,11 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
     setTimeout(() => setGlobalConfigPulsate(false), 3000)
   }
 
+  // Initialize with KCC defaults
+  // Users must explicitly enable options in Advanced Settings
   const [advancedOptions, setAdvancedOptions] = useState<AdvancedOptionsType>({
-    mangaStyle: isManga,
-    hq: true,
-    twoPanel: false,
-    webtoon: false,
-    targetSize: 400,
-    noProcessing: false,
-    upscale: true,
-    stretch: false,
-    splitter: 0,
-    gamma: 0.0,
-    outputFormat: "Auto",
-    author: "KCC",
-    noKepub: false,
-    customWidth: 0,
-    customHeight: 0,
+    ...FRONTEND_DEFAULTS,
+    mangaStyle: isManga, // Only exception: manga mode sets manga-style
   })
 
   const MAX_FILES = Number(process.env.NEXT_PUBLIC_MAX_FILES) || 10

@@ -6,6 +6,38 @@ from utils.enums.advanced_options import ADVANCED_OPTIONS_BY_KEY
 
 logger = setup_enhanced_logging()
 
+# Color e-reader device profiles that support color output
+COLOR_DEVICE_PROFILES = {"KCS", "KoCC", "KoLC", "KSCS"}
+
+# KCC default values - only send options that differ from these defaults
+KCC_DEFAULTS = {
+    "manga_style": False,
+    "hq": False,
+    "two_panel": False,
+    "webtoon": False,
+    "target_size": None,  # 400MB for regular, 100MB for webtoon (context-dependent)
+    "no_processing": False,
+    "upscale": False,
+    "stretch": False,
+    "splitter": 0,
+    "gamma": "Auto",
+    "autolevel": False,
+    "cropping": 2,
+    "cropping_power": 1.0,
+    "preserve_margin": 0,
+    "black_borders": False,
+    "white_borders": False,
+    "force_color": False,
+    "force_png": False,
+    "mozjpeg": False,
+    "author": "KCC",
+    "output_format": "Auto",
+    "no_kepub": False,
+    "spread_shift": False,
+    "no_rotate": False,
+    "rotate_first": False,
+}
+
 
 def generate_kcc_command(
     input_path: str,
@@ -53,21 +85,8 @@ def generate_command(options: Dict[str, Any], job_id: str = None, user_id: str =
     device_profile = options.get("device_profile", "")
     advanced_options = options.get("advanced_options", {}) or {}
 
-    # Determine sensible default output format when not explicitly provided
-    # - Kindle family (K*) defaults to MOBI (AZW3)
-    # - Kobo family (Ko*) defaults to EPUB (KEPUB by default unless --nokepub)
-    # - OTHER/unknown: leave as-is (frontend/validation handles requirements)
-    try:
-        of = (advanced_options.get("output_format") or "").strip()
-        if not of or of.upper() == "AUTO":
-            dp = (device_profile or "").strip()
-            if dp.startswith("K"):  # Kindle profiles: K1, K2, K34, KPW, KV, KPW5, KO, KS, etc.
-                advanced_options["output_format"] = "MOBI"
-            elif dp.startswith("Ko"):  # Kobo profiles: KoA, KoF, KoL, etc.
-                advanced_options["output_format"] = "EPUB"
-            # else: leave output_format unspecified
-    except Exception:
-        pass
+    # No auto-correction - frontend should only send what user explicitly changed
+    # KCC will use its own defaults based on device profile
 
     # Start with base command
     command = [
@@ -104,6 +123,7 @@ def generate_command(options: Dict[str, Any], job_id: str = None, user_id: str =
         )
 
     # Add advanced options using enum-based approach
+    # Only process options explicitly sent by frontend
     if advanced_options:
         log_with_context(
             logger,
@@ -116,8 +136,28 @@ def generate_command(options: Dict[str, Any], job_id: str = None, user_id: str =
         )
 
         for option_key, option_value in advanced_options.items():
-            if option_key in ADVANCED_OPTIONS_BY_KEY and option_value:
+            if option_key in ADVANCED_OPTIONS_BY_KEY:
                 option_enum = ADVANCED_OPTIONS_BY_KEY[option_key]
+
+                # Get the default value for this option
+                default_value = KCC_DEFAULTS.get(option_key)
+
+                # Skip if value matches the default (optimization)
+                if option_value == default_value:
+                    log_with_context(
+                        logger,
+                        "debug",
+                        f"Skipping option {option_key} (matches default: {default_value})",
+                        job_id=job_id,
+                        user_id=user_id,
+                        option_key=option_key,
+                        source="command_generator",
+                    )
+                    continue
+
+                # Skip if value is None, empty string, or False for booleans
+                if option_value is None or option_value == "" or (option_enum.type == "boolean" and not option_value):
+                    continue
 
                 # Handle different option types
                 if option_enum.type == "boolean" and option_value:
@@ -125,10 +165,7 @@ def generate_command(options: Dict[str, Any], job_id: str = None, user_id: str =
 
                 elif option_enum.type in ["number", "text", "select"] and option_value:
                     # For options that take values
-                    if option_enum.flag.startswith("--"):
-                        command.extend([option_enum.flag, str(option_value)])
-                    else:
-                        command.extend([option_enum.flag, str(option_value)])
+                    command.extend([option_enum.flag, str(option_value)])
 
                 log_with_context(
                     logger,

@@ -80,6 +80,8 @@ def register_routes(app):
             # Create job in database
             db = get_db_session()
             try:
+                # Only set options that were explicitly sent by frontend
+                # This keeps database clean and logs readable
                 job = ConversionJob(
                     id=job_id,
                     status=JobStatus.UPLOADING,
@@ -87,51 +89,37 @@ def register_routes(app):
                     device_profile=device_profile,
                     created_at=datetime.utcnow(),
                     uploading_at=datetime.utcnow(),
-                    # Boolean options
-                    manga_style=request.form.get("manga_style", "false").lower() == "true",
-                    hq=request.form.get("hq", "false").lower() == "true",
-                    two_panel=request.form.get("two_panel", "false").lower() == "true",
-                    webtoon=request.form.get("webtoon", "false").lower() == "true",
-                    no_processing=request.form.get("no_processing", "false").lower() == "true",
-                    upscale=request.form.get("upscale", "false").lower() == "true",
-                    stretch=request.form.get("stretch", "false").lower() == "true",
-                    autolevel=request.form.get("autolevel", "false").lower() == "true",
-                    black_borders=request.form.get("black_borders", "false").lower() == "true",
-                    white_borders=request.form.get("white_borders", "false").lower() == "true",
-                    force_color=request.form.get("force_color", "false").lower() == "true",
-                    force_png=request.form.get("force_png", "false").lower() == "true",
-                    mozjpeg=request.form.get("mozjpeg", "false").lower() == "true",
-                    no_kepub=request.form.get("no_kepub", "false").lower() == "true",
-                    spread_shift=request.form.get("spread_shift", "false").lower() == "true",
-                    no_rotate=request.form.get("no_rotate", "false").lower() == "true",
-                    rotate_first=request.form.get("rotate_first", "false").lower() == "true",
-                    # Integer options
-                    target_size=(
-                        int(request.form.get("target_size"))
-                        if request.form.get("target_size")
-                        else None
-                    ),
-                    splitter=int(request.form.get("splitter", 0)),
-                    cropping=int(request.form.get("cropping", 0)),
-                    custom_width=(
-                        int(request.form.get("custom_width"))
-                        if request.form.get("custom_width")
-                        else None
-                    ),
-                    custom_height=(
-                        int(request.form.get("custom_height"))
-                        if request.form.get("custom_height")
-                        else None
-                    ),
+                    # Boolean options - only set if sent
+                    manga_style=request.form.get("manga_style", "").lower() == "true" if request.form.get("manga_style") else None,
+                    hq=request.form.get("hq", "").lower() == "true" if request.form.get("hq") else None,
+                    two_panel=request.form.get("two_panel", "").lower() == "true" if request.form.get("two_panel") else None,
+                    webtoon=request.form.get("webtoon", "").lower() == "true" if request.form.get("webtoon") else None,
+                    no_processing=request.form.get("no_processing", "").lower() == "true" if request.form.get("no_processing") else None,
+                    upscale=request.form.get("upscale", "").lower() == "true" if request.form.get("upscale") else None,
+                    stretch=request.form.get("stretch", "").lower() == "true" if request.form.get("stretch") else None,
+                    autolevel=request.form.get("autolevel", "").lower() == "true" if request.form.get("autolevel") else None,
+                    black_borders=request.form.get("black_borders", "").lower() == "true" if request.form.get("black_borders") else None,
+                    white_borders=request.form.get("white_borders", "").lower() == "true" if request.form.get("white_borders") else None,
+                    force_color=request.form.get("force_color", "").lower() == "true" if request.form.get("force_color") else None,
+                    force_png=request.form.get("force_png", "").lower() == "true" if request.form.get("force_png") else None,
+                    mozjpeg=request.form.get("mozjpeg", "").lower() == "true" if request.form.get("mozjpeg") else None,
+                    no_kepub=request.form.get("no_kepub", "").lower() == "true" if request.form.get("no_kepub") else None,
+                    spread_shift=request.form.get("spread_shift", "").lower() == "true" if request.form.get("spread_shift") else None,
+                    no_rotate=request.form.get("no_rotate", "").lower() == "true" if request.form.get("no_rotate") else None,
+                    rotate_first=request.form.get("rotate_first", "").lower() == "true" if request.form.get("rotate_first") else None,
+                    # Integer options - only set if sent
+                    target_size=int(request.form.get("target_size")) if request.form.get("target_size") else None,
+                    splitter=int(request.form.get("splitter")) if request.form.get("splitter") else None,
+                    cropping=int(request.form.get("cropping")) if request.form.get("cropping") else None,
+                    custom_width=int(request.form.get("custom_width")) if request.form.get("custom_width") else None,
+                    custom_height=int(request.form.get("custom_height")) if request.form.get("custom_height") else None,
                     gamma=int(request.form.get("gamma")) if request.form.get("gamma") else None,
-                    cropping_power=int(request.form.get("cropping_power", 1)),
-                    preserve_margin=int(request.form.get("preserve_margin", 0)),
-                    # Text options
-                    author=request.form.get("author", "KCC"),
-                    title=request.form.get("title", ""),
-                    # Do not force a default here; let the command generator pick
-                    # a sensible default based on device profile when not provided.
-                    output_format=(request.form.get("output_format") or None),
+                    cropping_power=int(request.form.get("cropping_power")) if request.form.get("cropping_power") else None,
+                    preserve_margin=int(request.form.get("preserve_margin")) if request.form.get("preserve_margin") else None,
+                    # Text options - only set if sent
+                    author=request.form.get("author") if request.form.get("author") else None,
+                    title=request.form.get("title") if request.form.get("title") else None,
+                    output_format=request.form.get("output_format") if request.form.get("output_format") else None,
                 )
 
                 db.add(job)
