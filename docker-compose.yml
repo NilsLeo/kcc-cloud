@@ -13,6 +13,8 @@ services:
       - "3000:3000"
     volumes:
       - ./app/frontend:/app
+      - /app/node_modules          # Preserve installed packages
+      - /app/.next                 # Keep cache in container only (not shared with host)
     environment:
       - TZ=${TZ:-UTC}
       - HOME=/app
@@ -28,16 +30,11 @@ services:
       - WATCHPACK_POLLING_INTERVAL=1000
     depends_on:
       - backend
-    develop:
-      watch:
-        - action: rebuild
-          path: app/frontend/package.json
-        - action: rebuild
-          path: app/frontend/pnpm-lock.yaml
 
   backend:
     build:
-      context: ./app/backend
+      context: .
+      dockerfile: ./app/backend/Dockerfile
       args:
         USER_ID: ${PUID:-1000}
         GROUP_ID: ${PGID:-1000}
@@ -64,23 +61,11 @@ services:
       - MAX_UPLOAD_SIZE=${MAX_UPLOAD_SIZE:-1073741824}
     depends_on:
       - redis
-    develop:
-      watch:
-        - action: sync+restart
-          path: app/backend/app
-          ignore:
-            - __pycache__/
-            - .pytest_cache/
-            - '*.pyc'
-            - kcc/kindlegen/
-        - action: rebuild
-          path: app/backend/requirements.txt
-        - action: rebuild
-          path: app/backend/app/kcc/requirements.txt
 
   celery-worker:
     build:
-      context: ./app/backend
+      context: .
+      dockerfile: ./app/backend/Dockerfile
       args:
         USER_ID: ${PUID:-1000}
         GROUP_ID: ${PGID:-1000}
@@ -109,19 +94,6 @@ services:
       - STORAGE_PATH=/data
     depends_on:
       - redis
-    develop:
-      watch:
-        - action: sync+restart
-          path: app/backend/app
-          ignore:
-            - __pycache__/
-            - .pytest_cache/
-            - '*.pyc'
-            - kcc/kindlegen/
-        - action: rebuild
-          path: app/backend/requirements.txt
-        - action: rebuild
-          path: app/backend/app/kcc/requirements.txt
     deploy:
       resources:
         limits:
