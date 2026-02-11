@@ -18,7 +18,7 @@ flask-socketio==5.3.6
 python-socketio==5.14.0
 
 # Image processing dependencies
-pillow==11.1.0
+pillow==12.1.1
 mozjpeg-lossless-optimization==1.1.5
 natsort==8.4.0
 python-slugify==8.0.4
