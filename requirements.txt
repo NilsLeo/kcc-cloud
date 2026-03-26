@@ -31,7 +31,7 @@ packaging==25.0
 pandas==2.3.3
 parso==0.8.5
 pexpect==4.9.0
-pillow==12.0.0
+pillow==12.1.1
 platformdirs==4.5.1
 prompt_toolkit==3.0.52
 psutil==7.2.0
@@ -50,7 +50,7 @@ seaborn==0.13.2
 six==1.17.0
 SQLAlchemy==2.0.45
 stack-data==0.6.3
-tornado==6.5.4
+tornado==6.5.5
 traitlets==5.14.3
 typing_extensions==4.15.0
 tzdata==2025.3
