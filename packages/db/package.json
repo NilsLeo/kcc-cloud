@@ -1,0 +1,20 @@
+{
+  "name": "@mgc/db",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "db:generate": "prisma generate --schema prisma/base/schema.prisma"
+  },
+  "dependencies": {
+    "@mgc/core": "workspace:*",
+    "@prisma/client": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "prisma": "^5.0.0",
+    "typescript": "*"
+  }
+}

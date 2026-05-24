@@ -1,0 +1,39 @@
+syntax = "proto3";
+package conversion;
+
+service Converter {
+  rpc Convert(ConvertRequest) returns (stream ProgressEvent);
+  rpc Cancel(CancelRequest)   returns (CancelResponse);
+}
+
+message ConvertRequest {
+  string job_id      = 1;
+  string input_path  = 2;
+  string output_dir  = 3;
+  string format      = 4;   // "epub" | "mobi" | "cbz"
+  string device      = 5;
+  int32  kcc_workers = 6;
+  bool   manga       = 7;
+  bool   hq          = 8;
+  bool   webtoon     = 9;
+  bool   two_panel   = 10;
+  bool   upscale     = 11;
+}
+
+message ProgressEvent {
+  string job_id      = 1;
+  string phase       = 2;   // "mupdf" | "imgproc" | "epub" | "mobi" | "complete" | "error" | "cancelled"
+  int32  progress    = 3;   // 0-100
+  string status      = 4;
+  string message     = 5;
+  string output_path = 6;   // populated on phase="complete"
+}
+
+message CancelRequest {
+  string job_id = 1;
+}
+
+message CancelResponse {
+  bool   success = 1;
+  string message = 2;
+}

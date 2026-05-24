@@ -1,0 +1,16 @@
+services:
+  mgc:
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile
+    ports:
+      - "${PORT:-8090}:80"
+    volumes:
+      - mgc-data:/data
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: file:/data/mgc.db
+      STORAGE_PATH: /data/files
+
+volumes:
+  mgc-data:

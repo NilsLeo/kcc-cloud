@@ -1,0 +1,32 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../../../../node_modules/.prisma/base-client"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+model Job {
+  id                String    @id @default(cuid())
+  status            String    @default("UPLOADING")
+  filename          String
+  output_filename   String?
+  format            String?
+  device            String?
+  page_count        Int?
+  file_size_bytes   BigInt?
+  output_size_bytes BigInt?
+  eta_s             Float?
+  elapsed_s         Float?
+  error_message     String?
+  input_path        String?
+  output_path       String?
+  queued_at         DateTime?
+  processing_at     DateTime?
+  completed_at      DateTime?
+  created_at        DateTime  @default(now())
+  updated_at        DateTime  @updatedAt
+}

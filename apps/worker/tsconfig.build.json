@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "exclude": ["node_modules", "dist"],
+  "references": [
+    { "path": "../../packages/core/tsconfig.build.json" },
+    { "path": "../../packages/conversion-sdk/tsconfig.build.json" },
+    { "path": "../../packages/queue/tsconfig.build.json" },
+    { "path": "../../packages/events/tsconfig.build.json" },
+    { "path": "../../packages/db/tsconfig.build.json" }
+  ]
+}

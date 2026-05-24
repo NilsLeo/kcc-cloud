@@ -1,0 +1,54 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Zen+Maru+Gothic:wght@400;500;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;            --card-foreground: 222.2 84% 4.9%;
+    --primary: 263 70% 45%;       --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96.1%;   --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;       --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;      --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 72% 51%;     --destructive-foreground: 0 0% 100%;
+    --success: 142 76% 36%;       --success-foreground: 0 0% 100%;
+    --border: 214.3 31.8% 91.4%;  --input: 214.3 31.8% 91.4%;
+    --ring: 263 70% 45%;
+    --theme-light: 266 85% 76%;   --theme-medium: 262 83% 58%;   --theme-dark: 263 70% 45%;
+    --radius: .5rem;
+  }
+  .dark {
+    --background: 222.2 84% 4.9%;     --foreground: 210 40% 98%;
+    --card: 222.2 47% 7%;             --card-foreground: 210 40% 98%;
+    --primary: 266 85% 76%;           --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;   --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;       --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;      --accent-foreground: 210 40% 98%;
+    --destructive: 0 63% 45%;         --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 22%;        --input: 217.2 32.6% 22%;
+    --ring: 266 85% 76%;
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+  body {
+    background: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: 'Zen Maru Gothic', 'Poppins', sans-serif;
+  }
+}
+
+.dotted-bg {
+  background-image: radial-gradient(hsl(var(--border)) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+.progress-shimmer {
+  background-image: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  background-size: 200% 100%;
+}
+.scrollbar-thin::-webkit-scrollbar { width: 8px; }
+.scrollbar-thin::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 4px; }

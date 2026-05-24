@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "lib": ["ES2022"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true
+  },
+  "references": [
+    { "path": "./packages/core" },
+    { "path": "./packages/conversion-sdk" },
+    { "path": "./packages/queue" },
+    { "path": "./packages/db" },
+    { "path": "./packages/events" },
+    { "path": "./packages/storage" },
+    { "path": "./packages/auth-core" },
+    { "path": "./packages/telemetry" }
+  ]
+}

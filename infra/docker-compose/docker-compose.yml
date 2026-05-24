@@ -1,0 +1,62 @@
+services:
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  worker-kcc:
+    build:
+      context: ../../worker-kcc
+      dockerfile: Dockerfile.dev
+    environment:
+      GRPC_PORT: "50051"
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ../../
+      dockerfile: apps/worker/Dockerfile
+    environment:
+      REDIS_URL: redis://redis:6379
+      DATABASE_URL: file:/data/mgc.db
+      KCC_GRPC_ADDR: worker-kcc:50051
+    volumes:
+      - data:/data
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+      worker-kcc:
+        condition: service_started
+
+  api:
+    build:
+      context: ../../
+      dockerfile: apps/api/Dockerfile
+    environment:
+      REDIS_URL: redis://redis:6379
+      DATABASE_URL: file:/data/mgc.db
+      STORAGE_PATH: /data/files
+      PORT: "3000"
+    volumes:
+      - data:/data
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ../../apps/frontend
+      dockerfile: Dockerfile
+    ports:
+      - "8090:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  data:

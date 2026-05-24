@@ -1,0 +1,33 @@
+FROM python:3.11-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    libgl1 \
+    libfreetype6 \
+    libfontconfig1 \
+    p7zip-full \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install gRPC
+RUN pip install --no-cache-dir grpcio>=1.63.0 grpcio-tools>=1.63.0
+
+# Clone KCC and install its dependencies
+RUN git clone --depth 1 https://github.com/ciromattia/kcc.git /opt/kcc
+RUN pip install --no-cache-dir -r /opt/kcc/requirements.txt
+
+# Copy gRPC server and generate proto stubs
+COPY . /opt/kcc-grpc/
+RUN python -m grpc_tools.protoc \
+    -I /opt/kcc-grpc/proto \
+    --python_out=/opt/kcc-grpc \
+    --grpc_python_out=/opt/kcc-grpc \
+    /opt/kcc-grpc/proto/conversion.proto
+
+ENV KCC_SCRIPT=/opt/kcc/kcc-c2e.py
+ENV PYTHONPATH=/opt/kcc-grpc:/opt/kcc
+ENV GRPC_PORT=50051
+
+WORKDIR /opt/kcc-grpc
+EXPOSE 50051
+
+CMD ["python", "server.py"]
