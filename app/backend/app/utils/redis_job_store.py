@@ -164,6 +164,7 @@ class RedisJobStore:
                     "upload_progress_bytes",
                     "s3_parts_completed",
                     "s3_parts_total",
+                    "progress_percent",
                 ]:
                     # Parse integer fields
                     try:
@@ -454,6 +455,18 @@ class RedisJobStore:
                     ):
                         eta_iso = eta_iso + "Z"
                     job_dict["eta_at"] = eta_iso
+
+                    # Real backend-driven progress (phase + percentage) so the
+                    # UI can render actual conversion state, not an ETA ticker.
+                    _pp = job_data.get("progress_percent")
+                    if _pp is not None and _pp != "":
+                        try:
+                            job_dict["progress_percent"] = int(_pp)
+                        except Exception:
+                            pass
+                    _phase = job_data.get("progress_phase")
+                    if _phase:
+                        job_dict["progress_phase"] = _phase
 
                 if emit_status == "UPLOADING":
                     parts_key = f"multipart_parts:{job_id}"
@@ -957,6 +970,17 @@ def get_active_jobs_for_session(session_key: str) -> List[Dict[str, Any]]:
                 ):
                     eta_iso = eta_iso + "Z"
                 job_dict["eta_at"] = eta_iso
+
+                # Real backend-driven progress (phase + percentage)
+                _pp = job_data.get("progress_percent")
+                if _pp is not None and _pp != "":
+                    try:
+                        job_dict["progress_percent"] = int(_pp)
+                    except Exception:
+                        pass
+                _phase = job_data.get("progress_phase")
+                if _phase:
+                    job_dict["progress_phase"] = _phase
 
             if status == "COMPLETE":
                 # Output file info

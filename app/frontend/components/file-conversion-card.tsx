@@ -27,6 +27,8 @@ interface FileConversionCardProps {
       eta_at?: string
     }
     processing_at?: string
+    progress_percent?: number
+    progress_phase?: string
     error?: string
     isConverted?: boolean
     device?: string
@@ -136,12 +138,21 @@ export function FileConversionCard({
   }
 
   const computeProcessingPct = () => {
+    // Prefer REAL backend-driven progress (phase-granular) when the worker has
+    // reported it. This replaces the old client-side ETA ticker, which climbed
+    // toward a single coarse estimate and then froze at a fabricated 99%.
+    const backendPct = (file as any).progress_percent
+    if (typeof backendPct === "number" && backendPct >= 0) {
+      // Cap below 100 until COMPLETE; COMPLETE renders 100 via getProgressPercentage.
+      return Math.max(0, Math.min(99, Math.round(backendPct)))
+    }
+    // Fallback (older jobs / snapshot before first progress): derive from the
+    // ETA timestamps, but never fabricate motion beyond the estimate.
     const pp: any = (file as any).processing_progress
     const startedAt = (file as any).processing_at
     const etaAtTop = (file as any).eta_at
     if (!startedAt) return 0
     const startedMs = new Date(startedAt).getTime()
-    // Prefer absolute ETA timestamp if available
     const etaIso = etaAtTop || (pp && pp.eta_at)
     if (etaIso) {
       const etaMs = new Date(etaIso).getTime()
@@ -150,7 +161,6 @@ export function FileConversionCard({
       const pct = Math.floor((elapsed / total) * 100)
       return Math.max(0, Math.min(99, pct))
     }
-    // No fallback to projected seconds; rely on timestamps only
     return 0
   }
 

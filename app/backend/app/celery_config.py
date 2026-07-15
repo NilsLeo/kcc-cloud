@@ -54,9 +54,12 @@ celery_app.conf.update(
     result_expires=86400,  # Results expire after 24 hours (1 day)
     result_backend_always_retry=True,  # Retry result backend operations on failure
     result_backend_max_retries=10,  # Maximum retries for result backend operations
-    # Task time limits (prevent runaway tasks)
-    task_time_limit=28800,  # Hard limit: 8 hours (task killed)
-    task_soft_time_limit=27000,  # Soft limit: 7.5 hours (exception raised)
+    # Task time limits (backstop for runaway tasks). The stall watchdog in
+    # tasks.py is the primary fast-fail path; these are a coarse ceiling.
+    # Observed conversions top out around ~2.2h, so allow headroom above that
+    # instead of the former 8h, which let hung jobs linger for hours.
+    task_time_limit=int(os.getenv("CELERY_TASK_TIME_LIMIT", "10800")),  # 3h hard
+    task_soft_time_limit=int(os.getenv("CELERY_TASK_SOFT_TIME_LIMIT", "9900")),  # 2h45m soft
     # Worker settings
     worker_disable_rate_limits=True,  # No task-level rate limiting (not used)
     worker_max_tasks_per_child=50,  # Restart worker after 50 tasks (prevent memory leaks)
