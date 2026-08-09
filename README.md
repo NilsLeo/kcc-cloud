@@ -1,7 +1,7 @@
- 
-TRY IT HERE: https://www.mangaconverter.com
+ <div align="center">
 
-
+[👉 TRY IT FOR YOURSELF HERE](https://www.mangaconverter.com) 
+</div>
 <!-- PROJECT LOGO -->
 <div align="center">
 
