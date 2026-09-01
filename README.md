@@ -1,6 +1,10 @@
  <div align="center">
 
-[👉 TRY IT FOR YOURSELF HERE](https://www.mangaconverter.com) 
+[TRY IT NOW 👇](https://www.mangaconverter.com) 
+
+<a href="https://mangaconverter.com">
+  <img width="800" height="519" alt="ezgif-7d4f17efba911005" src="https://github.com/user-attachments/assets/90f28eff-a5be-4992-b642-051056c2cccd" />
+</a>
 </div>
 <!-- PROJECT LOGO -->
 <div align="center">
