@@ -6,10 +6,6 @@
   <img width="800" height="519" alt="ezgif-7d4f17efba911005" src="https://github.com/user-attachments/assets/90f28eff-a5be-4992-b642-051056c2cccd" />
 </a>
 </div>
-<!-- PROJECT LOGO -->
-<div align="center">
-
-<img src="docs/images/logo.png" width="300" alt="Manga & Comic Converter Logo" />
 <br/><br/>
 
 **A self-hosted web application for converting manga and comics to e-reader optimized formats**
