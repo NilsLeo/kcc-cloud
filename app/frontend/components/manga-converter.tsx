@@ -46,6 +46,9 @@ export type PendingUpload = {
   }
   eta_at?: string
   processing_at?: string
+  // Real backend-driven conversion progress (phase-granular) from the worker.
+  progress_percent?: number
+  progress_phase?: string
   upload_progress?: {
     completed_parts: number
     total_parts: number
@@ -333,6 +336,8 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
             reconciled.processing_progress = job.processing_progress
             ;(reconciled as any).processing_at = (job as any).processing_at
             ;(reconciled as any).eta_at = (job as any).eta_at
+            ;(reconciled as any).progress_percent = (job as any).progress_percent
+            ;(reconciled as any).progress_phase = (job as any).progress_phase
             reconciled.upload_progress = job.upload_progress
             // legacy worker download speed removed
 
@@ -380,6 +385,8 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
             processing_progress: job.processing_progress,
             eta_at: (job as any).eta_at,
             processing_at: (job as any).processing_at,
+            progress_percent: (job as any).progress_percent,
+            progress_phase: (job as any).progress_phase,
             inputFileSize: job.file_size,
             outputFileSize: (job as any).output_file_size,
             upload_progress: job.upload_progress,
@@ -437,12 +444,23 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
             // Preserve last known upload progress so the lighter overlay stays visible after UPLOADING
             const mergedUploadProgress = job.upload_progress ?? (f as any).upload_progress
 
+            // Preserve last known real progress if a snapshot omits it (backend
+            // progress only ever moves forward, so never let it regress here).
+            const mergedProgressPercent =
+              (job as any).progress_percent ??
+              (job.status === 'PROCESSING' ? (f as any).progress_percent : undefined)
+            const mergedProgressPhase =
+              (job as any).progress_phase ??
+              (job.status === 'PROCESSING' ? (f as any).progress_phase : undefined)
+
             const updated = {
               ...f,
               status: job.status,
               processing_progress: mergedProcessingProgress,
               processing_at: (job as any).processing_at ?? (f as any).processing_at,
               eta_at: (job as any).eta_at ?? (f as any).eta_at,
+              progress_percent: mergedProgressPercent,
+              progress_phase: mergedProgressPhase,
               upload_progress: mergedUploadProgress,
               // legacy worker download speed removed
               // Set queuedAt timestamp when job first enters QUEUED status
@@ -974,6 +992,8 @@ export function MangaConverter({ contentType }: { contentType: "comic" | "manga"
                 processing_progress: (dupe as any).processing_progress ?? (primary as any).processing_progress,
                 processing_at: (dupe as any).processing_at ?? (primary as any).processing_at,
                 eta_at: (dupe as any).eta_at ?? (primary as any).eta_at,
+                progress_percent: (dupe as any).progress_percent ?? (primary as any).progress_percent,
+                progress_phase: (dupe as any).progress_phase ?? (primary as any).progress_phase,
                 upload_progress: (dupe as any).upload_progress ?? (primary as any).upload_progress,
                 isConverted: (dupe as any).isConverted ?? (primary as any).isConverted,
                 convertedName: (dupe as any).convertedName ?? (primary as any).convertedName,

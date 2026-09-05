@@ -12,6 +12,9 @@ export interface QueueJob {
   completed_at?: string
   processing_at?: string
   eta_at?: string
+  // Real backend-driven conversion progress (phase-granular) reported by the worker.
+  progress_percent?: number
+  progress_phase?: string
   upload_progress?: {
     completed_parts: number
     total_parts: number

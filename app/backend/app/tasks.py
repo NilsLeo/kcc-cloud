@@ -9,6 +9,8 @@ import os
 import shutil
 import subprocess
 import tempfile
+import threading
+import time
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
@@ -20,6 +22,39 @@ from utils.command_generator import generate_kcc_command
 from utils.socketio_broadcast import broadcast_queue_update
 from utils.redis_job_store import RedisJobStore
 from utils.generated_estimator import estimate_from_job
+from utils.kcc_progress import parse_progress_line, phase_ceiling, MAX_PROGRESS
+
+# How long a conversion may make no observable progress (no stdout output and no
+# on-disk work in its temp dir) before we treat it as stalled and kill it. This
+# turns a hung job (OOMKill, deploy restart, deadlock) into a fast, explicit
+# failure instead of one that sits until the Celery hard time limit hours later.
+STALL_TIMEOUT_SECONDS = int(os.getenv("KCC_STALL_TIMEOUT_SECONDS", "900"))
+# How often the watchdog checks liveness, refreshes the heartbeat, and nudges
+# the progress bar forward while a long, stdout-silent phase is running.
+HEARTBEAT_INTERVAL_SECONDS = int(os.getenv("KCC_HEARTBEAT_INTERVAL_SECONDS", "15"))
+
+
+def _max_mtime(root: str) -> float:
+    """Return the most recent mtime of any file under ``root`` (0.0 if none).
+
+    Used as a liveness signal: while KCC processes pages it continuously writes
+    files into its temp workspace, so an advancing max-mtime proves the job is
+    alive even during the long "Processing images" phase, which is silent on
+    stdout. This avoids false-positive stall kills on legitimately long jobs.
+    """
+    latest = 0.0
+    try:
+        for dirpath, _dirs, files in os.walk(root):
+            for name in files:
+                try:
+                    mtime = os.path.getmtime(os.path.join(dirpath, name))
+                    if mtime > latest:
+                        latest = mtime
+                except OSError:
+                    continue
+    except OSError:
+        pass
+    return latest
 
 # Setup simple logging
 logging.basicConfig(
@@ -203,6 +238,11 @@ def convert_comic_task(self, job_id):
                 {
                     # Frontend only needs timestamps: processing_at (already set) and eta_at
                     "eta_at": eta_at.isoformat(),
+                    # Seed real progress so the UI starts from a genuine phase
+                    # rather than a client-side ETA-derived guess.
+                    "progress_percent": 0,
+                    "progress_phase": "Preparing",
+                    "heartbeat_at": datetime.now(timezone.utc),
                 },
             )
             logger.info(
@@ -254,11 +294,127 @@ def convert_comic_task(self, job_id):
             env=env,
         )
 
-        # Stream output
-        for line in process.stdout:
-            logger.info(f"KCC: {line.rstrip()}")
+        # Stream KCC output and translate it into real, backend-driven progress.
+        #
+        # KCC's CLI prints ordered phase markers (parsed by kcc_progress). We
+        # push the resulting percentage/phase to Redis and broadcast, so the UI
+        # renders actual conversion state instead of a client-side ETA ticker.
+        #
+        # A watchdog thread runs alongside the read loop to (a) refresh a
+        # heartbeat and gently advance the bar within the long, stdout-silent
+        # "Processing images" phase while real on-disk work is happening, and
+        # (b) kill the process if it makes no progress for STALL_TIMEOUT_SECONDS.
+        progress_lock = threading.Lock()
+        progress_state = {
+            "percent": 0,
+            "phase": "Preparing",
+            # Monotonic-clock timestamp of the last observed activity (stdout
+            # line or advancing on-disk mtime).
+            "last_activity": time.monotonic(),
+            "last_mtime": 0.0,
+            "stalled": False,
+        }
+        stop_watchdog = threading.Event()
 
-        process.wait()
+        def _publish_progress(percent, phase):
+            """Persist progress to Redis and broadcast to connected clients."""
+            try:
+                RedisJobStore.update_job(
+                    job_id,
+                    {
+                        "progress_percent": int(percent),
+                        "progress_phase": phase,
+                        "heartbeat_at": datetime.now(timezone.utc),
+                    },
+                )
+            except Exception:
+                pass
+            try:
+                broadcast_queue_update()
+            except Exception:
+                pass
+
+        def _watchdog():
+            while not stop_watchdog.wait(HEARTBEAT_INTERVAL_SECONDS):
+                now = time.monotonic()
+                mtime = _max_mtime(temp_dir)
+                changed_percent = None
+                changed_phase = None
+                with progress_lock:
+                    disk_active = mtime > progress_state["last_mtime"]
+                    if disk_active:
+                        progress_state["last_mtime"] = mtime
+                        progress_state["last_activity"] = now
+                    # While real on-disk work is happening, creep the bar
+                    # forward one point within the current phase (never past
+                    # the next real milestone), so a long silent phase still
+                    # shows honest motion rather than freezing.
+                    if disk_active:
+                        ceiling = phase_ceiling(progress_state["percent"])
+                        if progress_state["percent"] < ceiling - 1:
+                            progress_state["percent"] += 1
+                            changed_percent = progress_state["percent"]
+                            changed_phase = progress_state["phase"]
+                    stalled = (now - progress_state["last_activity"]) > STALL_TIMEOUT_SECONDS
+                    if stalled:
+                        progress_state["stalled"] = True
+
+                if stalled:
+                    logger.error(
+                        f"Job {job_id} stalled: no progress for "
+                        f"{STALL_TIMEOUT_SECONDS}s, killing conversion"
+                    )
+                    try:
+                        process.kill()
+                    except Exception:
+                        pass
+                    return
+
+                if changed_percent is not None:
+                    _publish_progress(changed_percent, changed_phase)
+                else:
+                    # Refresh the heartbeat even without a visible bar change so
+                    # liveness is observable.
+                    try:
+                        RedisJobStore.update_job(
+                            job_id, {"heartbeat_at": datetime.now(timezone.utc)}
+                        )
+                    except Exception:
+                        pass
+
+        watchdog_thread = threading.Thread(target=_watchdog, daemon=True)
+        watchdog_thread.start()
+
+        try:
+            for line in process.stdout:
+                text = line.rstrip()
+                logger.info(f"KCC: {text}")
+                parsed = parse_progress_line(text)
+                publish = None
+                with progress_lock:
+                    progress_state["last_activity"] = time.monotonic()
+                    if parsed:
+                        percent, phase = parsed
+                        # Progress is strictly monotonic: a marker only ever moves
+                        # the bar forward (the watchdog creep may already have
+                        # advanced past a marker's nominal percent within the same
+                        # phase, so use >= to still refresh the phase label).
+                        if percent >= progress_state["percent"]:
+                            progress_state["percent"] = percent
+                            progress_state["phase"] = phase
+                            publish = (percent, phase)
+                if publish is not None:
+                    _publish_progress(*publish)
+        finally:
+            stop_watchdog.set()
+            process.wait()
+            watchdog_thread.join(timeout=5)
+
+        if progress_state["stalled"]:
+            raise RuntimeError(
+                "worker stalled (possible OOMKill or deploy restart): no "
+                f"progress for {STALL_TIMEOUT_SECONDS}s"
+            )
 
         if process.returncode != 0:
             raise RuntimeError(f"KCC conversion failed with return code {process.returncode}")
@@ -324,6 +480,8 @@ def convert_comic_task(self, job_id):
                     "output_filename": job.output_filename,
                     "output_file_size": job.output_file_size or 0,
                     "actual_duration": job.actual_duration or 0,
+                    "progress_percent": 100,
+                    "progress_phase": "Complete",
                 },
             )
         except Exception:
